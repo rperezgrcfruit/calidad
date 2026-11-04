@@ -1,0 +1,35 @@
+# ============================================
+# Archivos generados / temporales
+# ============================================
+error_log
+*.log
+.tmp-edge/
+
+# ============================================
+# Editor y sistema operativo
+# ============================================
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ============================================
+# Imágenes subidas en tiempo de ejecución
+# (recepciones de calidad: ~6 GB, no versionar)
+# ============================================
+view/assets/images/recepcion_calidad_images/
+
+# ============================================
+# Dependencias
+# ============================================
+node_modules/
+vendor/
+
+# ============================================
+# Configuración local con credenciales
+# (.env NO se versiona; .env.example sí)
+# ============================================
+.env
+.env.local
+.env.*.local

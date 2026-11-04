@@ -1,0 +1,11 @@
+# Normalizar finales de línea (LF, igual que el VPS Linux)
+* text=auto eol=lf
+
+# Archivos binarios
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.resx binary

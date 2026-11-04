@@ -1,0 +1,89 @@
+# ============================================================
+# CONFIGURACIÓN DE SEGURIDAD APACHE - Dinámica por entorno
+# ============================================================
+
+# Desactivar listado de directorios
+Options -Indexes
+
+# ============================================================
+# PROTECCIÓN DE ARCHIVOS SENSIBLES
+# ============================================================
+<FilesMatch "^\.(env|git)">
+    Require all denied
+</FilesMatch>
+
+# Compatibilidad con Apache 2.2
+<IfModule !mod_authz_core.c>
+    <FilesMatch "^\.(env|git)">
+        Order allow,deny
+        Deny from all
+    </FilesMatch>
+</IfModule>
+
+# ============================================================
+# HEADERS DE SEGURIDAD
+# ============================================================
+<IfModule mod_headers.c>
+    # Prevenir MIME sniffing
+    Header always set X-Content-Type-Options "nosniff"
+    
+    # Prevenir clickjacking
+    Header always set X-Frame-Options "SAMEORIGIN"
+    
+    # XSS Protection (Legacy browsers)
+    Header always set X-XSS-Protection "1; mode=block"
+    
+    # Referrer Policy
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    
+    # Permissions Policy
+    Header always set Permissions-Policy "geolocation=(), microphone=(), camera=(), payment=(), usb=()"
+    
+    # NOTA: HSTS y CSP se activan SÓLO si HTTPS está disponible
+    # Para activar en VPS con HTTPS, descomentar las siguientes líneas:
+    # Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+    # Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://cdn.plot.ly; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com; img-src 'self' data: https:; font-src 'self' https://cdnjs.cloudflare.com https://fonts.gstatic.com;"
+</IfModule>
+
+# ============================================================
+# COMPRESIÓN GZIP
+# ============================================================
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/plain text/html text/xml text/css application/json application/javascript application/xml application/xml+rss text/javascript
+</IfModule>
+
+# ============================================================
+# CACHE CONTROL - Archivos estáticos
+# ============================================================
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType image/jpg "access plus 1 month"
+    ExpiresByType image/jpeg "access plus 1 month"
+    ExpiresByType image/gif "access plus 1 month"
+    ExpiresByType image/png "access plus 1 month"
+    ExpiresByType text/css "access plus 1 month"
+    ExpiresByType application/javascript "access plus 1 month"
+    ExpiresByType text/javascript "access plus 1 month"
+    ExpiresByType application/font-woff "access plus 1 month"
+    ExpiresByType font/woff "access plus 1 month"
+    ExpiresByType application/vnd.ms-fontobject "access plus 1 month"
+    ExpiresByType image/svg+xml "access plus 1 month"
+</IfModule>
+
+# ============================================================
+# REESCRITURA DE URLs (Amigables)
+# ============================================================
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    
+    # Bloquear acceso directo a la carpeta de configuración (credenciales)
+    RewriteRule ^config/ - [F,L]
+    
+    # Excluir archivos estáticos
+    RewriteRule \.(css|js|png|jpg|jpeg|gif|ico|pdf|svg|woff|woff2|ttf|eot|webfont)$ - [NC,L]
+    
+    # Reenviar todo a index.php
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^(.*)$ index.php [QSA,L]
+</IfModule>
