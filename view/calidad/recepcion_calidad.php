@@ -8,15 +8,32 @@
         </div>
     </div>
     
-    <!-- Acciones -->
+    <!-- Acciones y filtro -->
     <div class="row mb-4">
         <div class="col-12">
-            <a href="/calidad/recepcion-calidad/nueva-recepcion" class="btn btn-success btn-lg">
-                <i class="fas fa-plus me-2"></i> Nueva Recepción
-            </a>
-            <button id="btn-refresh" class="btn btn-outline-secondary btn-lg ms-2">
-                <i class="fas fa-sync-alt me-2"></i> Actualizar
-            </button>
+            <div class="d-flex flex-wrap gap-2 align-items-center">
+                <a href="/calidad/recepcion-calidad/nueva-recepcion" class="btn btn-success btn-lg">
+                    <i class="fas fa-plus me-2"></i> Nueva Recepción
+                </a>
+                <button id="btn-refresh" class="btn btn-outline-secondary btn-lg">
+                    <i class="fas fa-sync-alt me-2"></i> Actualizar
+                </button>
+
+                <form method="get" action="/calidad/recepcion-calidad" class="ms-auto d-flex gap-2" role="search">
+                    <input type="search" name="q" class="form-control" style="min-width: 300px"
+                           placeholder="Buscar lote, productor, variedad..."
+                           value="<?php echo htmlspecialchars($buscar ?? ''); ?>"
+                           maxlength="60" autocomplete="off">
+                    <button class="btn btn-success" type="submit" title="Buscar">
+                        <i class="fas fa-search"></i>
+                    </button>
+                    <?php if (!empty($buscar)): ?>
+                        <a href="/calidad/recepcion-calidad" class="btn btn-outline-secondary" title="Limpiar filtro">
+                            <i class="fas fa-times"></i>
+                        </a>
+                    <?php endif; ?>
+                </form>
+            </div>
         </div>
     </div>
     
@@ -36,7 +53,7 @@
                             <tr>
                                 <th>#</th>
                                 <th>Lote</th>
-                                <th>Esperie</th>
+                                <th>Especie</th>
                                 <th>Variedad</th>
                                 <th>Productor</th>
                                 <th>Frutos</th>
@@ -75,17 +92,25 @@
             <?php else: ?>
                 <div class="text-center py-5">
                     <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
-                    <h5 class="text-muted">No hay recepciones registradas</h5>
-                    <p class="text-muted">Comience registrando una nueva recepción</p>
-                    <a href="/calidad/recepcion-calidad/nueva-recepcion" class="btn btn-success">
-                        <i class="fas fa-plus me-2"></i> Nueva Recepción
-                    </a>
+                    <?php if (!empty($buscar)): ?>
+                        <h5 class="text-muted">Sin resultados para «<?php echo htmlspecialchars($buscar); ?>»</h5>
+                        <p class="text-muted">Pruebe con otro lote, productor o variedad</p>
+                        <a href="/calidad/recepcion-calidad" class="btn btn-outline-secondary">
+                            <i class="fas fa-times me-2"></i> Limpiar filtro
+                        </a>
+                    <?php else: ?>
+                        <h5 class="text-muted">No hay recepciones registradas</h5>
+                        <p class="text-muted">Comience registrando una nueva recepción</p>
+                        <a href="/calidad/recepcion-calidad/nueva-recepcion" class="btn btn-success">
+                            <i class="fas fa-plus me-2"></i> Nueva Recepción
+                        </a>
+                    <?php endif; ?>
                 </div>
             <?php endif; ?>
 
             <?php
             $pagUrl = '/calidad/recepcion-calidad';
-            $pagParams = [];
+            $pagParams = !empty($buscar) ? ['q' => $buscar] : [];
             include RUTA . '/calidad/view/layouts/pagination.php';
             ?>
         </div>

@@ -9,13 +9,22 @@ class ControllerRecepcionCalidad
         $empresa = $_SESSION['empresa'];
         $temporada = $_SESSION['temporada'];
 
+        // Filtro de búsqueda (lote, productor, especie o variedad)
+        $buscar = trim((string) ($_GET['q'] ?? ''));
+        if (mb_strlen($buscar) > 60) {
+            $buscar = mb_substr($buscar, 0, 60);
+        }
+
         $model = new ModelRecepcionCalidad();
 
         // Paginación
-        $total = $model->ContarRecepciones($conexion, $empresa, $temporada);
+        $total = $model->ContarRecepciones($conexion, $empresa, $temporada, $buscar);
         $pag = paginar($total, 25, $_GET['pagina'] ?? 1);
 
-        $result = $model->GetRecepcionesPaginadas($conexion, $empresa, $temporada, $pag['porPagina'], $pag['offset']);
+        $result = $model->GetRecepcionesPaginadas($conexion, $empresa, $temporada, $pag['porPagina'], $pag['offset'], $buscar);
+
+        // Filtros a conservar en los enlaces de paginación
+        $pagParams = $buscar !== '' ? ['q' => $buscar] : [];
 
         include_once RUTA . '/calidad/view/calidad/recepcion_calidad.php';
     }

@@ -24,11 +24,24 @@ class ModelRecepcionCalidad{
         }
     }
 
-    public function ContarRecepciones($conexion, $empresa, $temporada){
+    public function ContarRecepciones($conexion, $empresa, $temporada, $buscar = ''){
+        $where = 'recepcion_calidad.cliente = ?
+        and recepcion_granel.exportadora = ? and recepcion_calidad.temporada = ? and recepcion_granel.temporada = ? and productores.empresa = ?';
+
+        $params = [$empresa, $empresa, $temporada, $temporada, $empresa];
+        $types  = 'sssss';
+
+        if ($buscar !== '') {
+            $where .= ' AND (recepcion_calidad.lote LIKE ? OR productores.r_social LIKE ? OR recepcion_granel.especie LIKE ? OR recepcion_granel.variedad LIKE ?)';
+            $like = '%' . $buscar . '%';
+            array_push($params, $like, $like, $like, $like);
+            $types .= 'ssss';
+        }
+
         $sql = mysqli_prepare($conexion, 'SELECT COUNT(*) AS total
-         FROM recepcion_calidad INNER JOIN recepcion_granel ON recepcion_calidad.lote = recepcion_granel.lote INNER JOIN productores ON recepcion_granel.productor = productores.codigo WHERE recepcion_calidad.cliente = ?
-        and recepcion_granel.exportadora = ? and recepcion_calidad.temporada = ? and recepcion_granel.temporada = ? and productores.empresa = ?');
-        mysqli_stmt_bind_param($sql, 'sssss', $empresa, $empresa, $temporada, $temporada, $empresa);
+         FROM recepcion_calidad INNER JOIN recepcion_granel ON recepcion_calidad.lote = recepcion_granel.lote INNER JOIN productores ON recepcion_granel.productor = productores.codigo WHERE ' . $where);
+
+        mysqli_stmt_bind_param($sql, $types, ...$params);
         mysqli_stmt_execute($sql);
 
         $result = mysqli_stmt_get_result($sql);
@@ -43,16 +56,36 @@ class ModelRecepcionCalidad{
         return $total;
     }
 
-    public function GetRecepcionesPaginadas($conexion, $empresa, $temporada, $limit, $offset){
-        $sql = mysqli_prepare($conexion, 'SELECT recepcion_calidad.lote, recepcion_calidad.fecha_recepcion, recepcion_calidad.fecha_cosecha, recepcion_calidad.hora_control, recepcion_calidad.fecha_inspeccion, recepcion_calidad.cantidad_frutos, recepcion_granel.especie, recepcion_granel.variedad, cantidad_frutos, recepcion_granel.productor,
-        recepcion_granel.cant_bins, recepcion_granel.guia, productores.r_social, productores.rut, productores.ggn
-         FROM recepcion_calidad INNER JOIN recepcion_granel ON recepcion_calidad.lote = recepcion_granel.lote INNER JOIN productores ON recepcion_granel.productor = productores.codigo WHERE recepcion_calidad.cliente = ?
-        and recepcion_granel.exportadora = ? and recepcion_calidad.temporada = ? and recepcion_granel.temporada = ? and productores.empresa = ? ORDER BY recepcion_calidad.lote LIMIT ? OFFSET ?');
+    public function GetRecepcionesPaginadas($conexion, $empresa, $temporada, $limit, $offset, $buscar = ''){
+        $where = 'recepcion_calidad.cliente = ?
+        and recepcion_granel.exportadora = ? and recepcion_calidad.temporada = ? and recepcion_granel.temporada = ? and productores.empresa = ?';
+
+        $params = [$empresa, $empresa, $temporada, $temporada, $empresa];
+        $types  = 'sssss';
+
+        if ($buscar !== '') {
+            $where .= ' AND (recepcion_calidad.lote LIKE ? OR productores.r_social LIKE ? OR recepcion_granel.especie LIKE ? OR recepcion_granel.variedad LIKE ?)';
+            $like = '%' . $buscar . '%';
+            array_push($params, $like, $like, $like, $like);
+            $types .= 'ssss';
+        }
 
         $limit  = (int) $limit;
         $offset = (int) $offset;
 
-        mysqli_stmt_bind_param($sql, 'sssssii', $empresa, $empresa, $temporada, $temporada, $empresa, $limit, $offset);
+        // Orden natural: prefijo alfabético + parte numérica (BK0002 antes que BK00019)
+        $orden = "ORDER BY REGEXP_REPLACE(recepcion_calidad.lote, '[0-9]+$', ''),
+                           CAST(REGEXP_REPLACE(recepcion_calidad.lote, '[^0-9]', '') AS UNSIGNED),
+                           recepcion_calidad.lote";
+
+        $sql = mysqli_prepare($conexion, 'SELECT recepcion_calidad.lote, recepcion_calidad.fecha_recepcion, recepcion_calidad.fecha_cosecha, recepcion_calidad.hora_control, recepcion_calidad.fecha_inspeccion, recepcion_calidad.cantidad_frutos, recepcion_granel.especie, recepcion_granel.variedad, cantidad_frutos, recepcion_granel.productor,
+        recepcion_granel.cant_bins, recepcion_granel.guia, productores.r_social, productores.rut, productores.ggn
+         FROM recepcion_calidad INNER JOIN recepcion_granel ON recepcion_calidad.lote = recepcion_granel.lote INNER JOIN productores ON recepcion_granel.productor = productores.codigo WHERE ' . $where . ' ' . $orden . ' LIMIT ? OFFSET ?');
+
+        array_push($params, $limit, $offset);
+        $types .= 'ii';
+
+        mysqli_stmt_bind_param($sql, $types, ...$params);
         mysqli_stmt_execute($sql);
 
         $result = mysqli_stmt_get_result($sql);
