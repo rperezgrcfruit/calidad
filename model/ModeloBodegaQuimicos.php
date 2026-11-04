@@ -172,77 +172,154 @@ class ModeloBodegaQuimicos
     // =============================
     
     /**
-     * Insertar nueva recepción de quimicos
+     * Catálogo de químicos activos con el stock de la bodega indicada
      */
-    public function insertarRecepcion($conexion, $datos)
+    public function obtenerCatalogo($conexion, $bodega = '')
     {
-        $sql = "INSERT INTO quimicos_recepcion (
-            fecha, bodega, proveedor, guia, factura, lote_proveedor, observaciones, n_recepcion
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-        
+        $sql = "SELECT q.codigo, q.nombre, q.tipo, q.unidad_medida, q.registro_sag,
+                       IFNULL(e.cantidad, 0) AS stock_actual
+                FROM quimicos q
+                LEFT JOIN quimicos_existencia e
+                       ON e.quimico_codigo = q.codigo AND e.bodega = ?
+                WHERE q.activo = 1
+                ORDER BY q.nombre";
+
         $stmt = mysqli_prepare($conexion, $sql);
-        mysqli_stmt_bind_param($stmt, 'ssssssss',
-            $datos['fecha'],
-            $datos['bodega'],
-            $datos['proveedor'],
-            $datos['guia'],
-            $datos['factura'],
-            $datos['lote_proveedor'],
-            $datos['observaciones'],
-            $datos['n_recepcion']
-        );
-        $result = mysqli_stmt_execute($stmt);
+        mysqli_stmt_bind_param($stmt, 's', $bodega);
+        mysqli_stmt_execute($stmt);
+
+        $result = mysqli_stmt_get_result($stmt);
+        $data = [];
+
+        if ($result && $result->num_rows > 0) {
+            $data = mysqli_fetch_all($result, MYSQLI_ASSOC);
+        }
+
         mysqli_stmt_close($stmt);
-        return $result;
+
+        return $data;
     }
-    
+
     /**
-     * Insertar detalle de recepcion
+     * Registrar una recepción completa: cabecera + detalle + stock, en una transacción.
+     *
+     * @param array $cabecera fecha, guia, factura, proveedor, lote_proveedor, bodega, observaciones y montos
+     * @param array $items    [['quimico_codigo','cant_envases','contenido_envase','unidad'], ...]
+     * @return int|false      Número de recepción generado
      */
-    public function insertarDetalleRecepcion($conexion, $detalles)
+    public function crearRecepcion($conexion, array $cabecera, array $items)
     {
-        $sql = "INSERT INTO quimicos_recepcion_detalle (
-            n_recepcion, quimico_codigo, cant_envases, contenido_envase, cantidad_total, unidad
-        ) VALUES (?, ?, ?, ?, ?, ?)";
-        
-        $stmt = mysqli_prepare($conexion, $sql);
-        
-        foreach ($detalles as $detalle) {
-            mysqli_stmt_bind_param($stmt, 'ssssss',
-                $detalle['n_recepcion'],
-                $detalle['quimico_codigo'],
-                $detalle['cant_envases'],
-                $detalle['contenido_envase'],
-                $detalle['cantidad_total'],
-                $detalle['unidad']
+        if (empty($items)) {
+            return false;
+        }
+
+        $conexion->begin_transaction();
+
+        try {
+            $sqlCab = "INSERT INTO quimicos_recepcion
+                        (fecha, guia, factura, proveedor, lote_proveedor, bodega, responsable,
+                         observaciones, empresa, temporada,
+                         neto_clp, iva_clp, total_clp, neto_usd, total_usd)
+                       VALUES (?, ?, ?, ?, ?, ?, NULL, ?, NULL, NULL, ?, ?, ?, ?, ?)";
+
+            $stmt = mysqli_prepare($conexion, $sqlCab);
+            mysqli_stmt_bind_param(
+                $stmt,
+                'sssssssddddd',
+                $cabecera['fecha'],
+                $cabecera['guia'],
+                $cabecera['factura'],
+                $cabecera['proveedor'],
+                $cabecera['lote_proveedor'],
+                $cabecera['bodega'],
+                $cabecera['observaciones'],
+                $cabecera['neto_clp'],
+                $cabecera['iva_clp'],
+                $cabecera['total_clp'],
+                $cabecera['neto_usd'],
+                $cabecera['total_usd']
             );
             mysqli_stmt_execute($stmt);
+            mysqli_stmt_close($stmt);
+
+            $nRecepcion = (int) $conexion->insert_id;
+
+            foreach ($items as $item) {
+                $cantEnvases = (float) $item['cant_envases'];
+                $contenido   = (float) $item['contenido_envase'];
+                $total       = round($cantEnvases * $contenido, 2);
+
+                if ($cantEnvases <= 0 || $contenido <= 0) {
+                    throw new RuntimeException('Cantidad inválida para ' . $item['quimico_codigo']);
+                }
+
+                $stmtDet = mysqli_prepare($conexion, 'INSERT INTO quimicos_recepcion_detalle
+                        (n_recepcion, quimico_codigo, cant_envases, contenido_envase, cantidad_total, unidad)
+                        VALUES (?, ?, ?, ?, ?, ?)');
+                mysqli_stmt_bind_param(
+                    $stmtDet,
+                    'isddds',
+                    $nRecepcion,
+                    $item['quimico_codigo'],
+                    $cantEnvases,
+                    $contenido,
+                    $total,
+                    $item['unidad']
+                );
+                mysqli_stmt_execute($stmtDet);
+                mysqli_stmt_close($stmtDet);
+
+                // Actualizar existencia (stock) de la bodega
+                $stmtEx = mysqli_prepare($conexion, 'INSERT INTO quimicos_existencia (quimico_codigo, bodega, cantidad, unidad)
+                        VALUES (?, ?, ?, ?)
+                        ON DUPLICATE KEY UPDATE cantidad = cantidad + VALUES(cantidad), unidad = VALUES(unidad)');
+                mysqli_stmt_bind_param($stmtEx, 'ssds', $item['quimico_codigo'], $cabecera['bodega'], $total, $item['unidad']);
+                mysqli_stmt_execute($stmtEx);
+                mysqli_stmt_close($stmtEx);
+            }
+
+            $conexion->commit();
+
+            return $nRecepcion;
+        } catch (Throwable $e) {
+            $conexion->rollback();
+            error_log('[QUIMICOS] Error al crear recepción: ' . $e->getMessage());
+            return false;
         }
-        mysqli_stmt_close($stmt);
-        return true;
     }
     
     /**
-     * Construye el WHERE de recepciones según filtros
+     * SELECT base de recepciones (cabecera + totales calculados)
+     */
+    private function selectRecepciones()
+    {
+        return "SELECT r.n_recepcion, r.fecha,
+                       COALESCE(b.nombre, r.bodega) AS bodega_nombre,
+                       r.proveedor, r.guia, r.factura, r.lote_proveedor,
+                       IFNULL(r.observaciones, '') AS observaciones,
+                       (SELECT COUNT(*) FROM quimicos_recepcion_detalle d
+                         WHERE d.n_recepcion = r.n_recepcion) AS items,
+                       IFNULL((SELECT SUM(d.cantidad_total) FROM quimicos_recepcion_detalle d
+                         WHERE d.n_recepcion = r.n_recepcion), 0) AS cantidad_total,
+                       r.neto_clp, r.iva_clp, r.total_clp, r.neto_usd, r.total_usd
+                FROM quimicos_recepcion r
+                LEFT JOIN quimicos_bodegas b ON b.codigo = r.bodega";
+    }
+
+    /**
+     * WHERE de recepciones según filtros.
+     * proveedor_id: 0 = todos, -1 = solo texto libre, >0 = proveedor del catálogo
+     *
      * @return array [string $where, array $params, string $types]
      */
     private function filtroRecepciones($filtros)
     {
-        $where = " WHERE 1=1";
-        $params = [];
-        $types = '';
+        $desde = !empty($filtros['desde']) ? $filtros['desde'] : '2000-01-01';
+        $hasta = !empty($filtros['hasta']) ? $filtros['hasta'] : '2100-12-31';
 
-        if (!empty($filtros['desde'])) {
-            $where .= " AND r.fecha >= ? ";
-            $params[] = $filtros['desde'];
-            $types .= 's';
-        }
-
-        if (!empty($filtros['hasta'])) {
-            $where .= " AND r.fecha <= ? ";
-            $params[] = $filtros['hasta'];
-            $types .= 's';
-        }
+        $where = " WHERE r.fecha BETWEEN ? AND ? ";
+        $params = [$desde, $hasta];
+        $types = 'ss';
 
         if (!empty($filtros['bodega'])) {
             $where .= " AND r.bodega = ? ";
@@ -250,9 +327,14 @@ class ModeloBodegaQuimicos
             $types .= 's';
         }
 
-        if (!empty($filtros['proveedor'])) {
+        $provId = isset($filtros['proveedor_id']) ? (int) $filtros['proveedor_id'] : 0;
+
+        if ($provId === -1) {
+            // Proveedores escritos a mano (no existen en el catálogo)
+            $where .= " AND r.proveedor NOT IN (SELECT nombre FROM quimicos_proveedores WHERE activo = 1) ";
+        } elseif ($provId > 0 && !empty($filtros['proveedor_nombre'])) {
             $where .= " AND r.proveedor = ? ";
-            $params[] = $filtros['proveedor'];
+            $params[] = $filtros['proveedor_nombre'];
             $types .= 's';
         }
 
@@ -260,32 +342,35 @@ class ModeloBodegaQuimicos
     }
 
     /**
-     * Obtener recepciones con filtros
+     * Obtener recepciones con filtros (opcionalmente paginadas)
      */
-    public function obtenerRecepciones($conexion, $filtros = [])
+    public function obtenerRecepciones($conexion, $filtros = [], $limit = null, $offset = 0)
     {
         list($where, $params, $types) = $this->filtroRecepciones($filtros);
 
-        $sql = "SELECT r.n_recepcion, r.fecha, b.nombre AS bodega_nombre, r.proveedor, r.guia, r.factura, r.lote_proveedor
-                FROM quimicos_recepcion r
-                LEFT JOIN quimicos_bodegas b ON b.codigo = r.bodega"
-                . $where .
-                " ORDER BY r.fecha DESC, r.n_recepcion";
-        
+        $sql = $this->selectRecepciones() . $where . " ORDER BY r.fecha DESC, r.n_recepcion DESC";
+
+        if ($limit !== null) {
+            $sql .= " LIMIT ? OFFSET ?";
+            $params[] = (int) $limit;
+            $params[] = (int) $offset;
+            $types .= 'ii';
+        }
+
         $stmt = mysqli_prepare($conexion, $sql);
-        if (!empty($params)) {
-            mysqli_stmt_bind_param($stmt, $types, ...$params);
-        }
+        mysqli_stmt_bind_param($stmt, $types, ...$params);
         mysqli_stmt_execute($stmt);
+
         $result = mysqli_stmt_get_result($stmt);
-        
-        if ($result && mysqli_num_rows($result) > 0) {
+        $data = [];
+
+        if ($result && $result->num_rows > 0) {
             $data = mysqli_fetch_all($result, MYSQLI_ASSOC);
-            mysqli_stmt_close($stmt);
-            return $data;
         }
+
         mysqli_stmt_close($stmt);
-        return [];
+
+        return $data;
     }
 
     /**
@@ -295,18 +380,15 @@ class ModeloBodegaQuimicos
     {
         list($where, $params, $types) = $this->filtroRecepciones($filtros);
 
-        $sql = "SELECT COUNT(*) AS total
-                FROM quimicos_recepcion r
-                LEFT JOIN quimicos_bodegas b ON b.codigo = r.bodega" . $where;
+        $sql = "SELECT COUNT(*) AS total FROM quimicos_recepcion r" . $where;
 
         $stmt = mysqli_prepare($conexion, $sql);
-        if (!empty($params)) {
-            mysqli_stmt_bind_param($stmt, $types, ...$params);
-        }
+        mysqli_stmt_bind_param($stmt, $types, ...$params);
         mysqli_stmt_execute($stmt);
-        $result = mysqli_stmt_get_result($stmt);
 
+        $result = mysqli_stmt_get_result($stmt);
         $total = 0;
+
         if ($result && $row = mysqli_fetch_assoc($result)) {
             $total = (int) $row['total'];
         }
@@ -317,35 +399,60 @@ class ModeloBodegaQuimicos
     }
 
     /**
-     * Obtener recepciones paginadas con filtros
+     * Resumen del conjunto filtrado: recepciones, ítems y cantidad total
      */
-    public function obtenerRecepcionesPaginadas($conexion, $filtros = [], $limit = 25, $offset = 0)
+    public function resumenRecepciones($conexion, $filtros = [])
     {
         list($where, $params, $types) = $this->filtroRecepciones($filtros);
 
-        $limit  = (int) $limit;
-        $offset = (int) $offset;
-
-        $sql = "SELECT r.n_recepcion, r.fecha, b.nombre AS bodega_nombre, r.proveedor, r.guia, r.factura, r.lote_proveedor
-                FROM quimicos_recepcion r
-                LEFT JOIN quimicos_bodegas b ON b.codigo = r.bodega"
-                . $where .
-                " ORDER BY r.fecha DESC, r.n_recepcion LIMIT ? OFFSET ?";
+        $sql = "SELECT COUNT(*) AS recepciones,
+                       IFNULL(SUM((SELECT COUNT(*) FROM quimicos_recepcion_detalle d
+                                    WHERE d.n_recepcion = r.n_recepcion)), 0) AS items,
+                       IFNULL(SUM((SELECT IFNULL(SUM(d.cantidad_total), 0)
+                                    FROM quimicos_recepcion_detalle d
+                                    WHERE d.n_recepcion = r.n_recepcion)), 0) AS cantidad
+                FROM quimicos_recepcion r" . $where;
 
         $stmt = mysqli_prepare($conexion, $sql);
-
-        $params[] = $limit;
-        $params[] = $offset;
-        $types .= 'ii';
-
         mysqli_stmt_bind_param($stmt, $types, ...$params);
         mysqli_stmt_execute($stmt);
 
         $result = mysqli_stmt_get_result($stmt);
-        $data = [];
+        $resumen = ['recepciones' => 0, 'items' => 0, 'cantidad' => 0];
 
-        if ($result && $result->num_rows > 0) {
-            $data = mysqli_fetch_all($result, MYSQLI_ASSOC);
+        if ($result && $row = mysqli_fetch_assoc($result)) {
+            $resumen = [
+                'recepciones' => (int) $row['recepciones'],
+                'items'       => (int) $row['items'],
+                'cantidad'    => (float) $row['cantidad'],
+            ];
+        }
+
+        mysqli_stmt_close($stmt);
+
+        return $resumen;
+    }
+
+    /**
+     * Cabecera de una recepción
+     */
+    public function obtenerRecepcion($conexion, $nRecepcion)
+    {
+        $sql = "SELECT r.*, COALESCE(b.nombre, r.bodega) AS bodega_nombre
+                FROM quimicos_recepcion r
+                LEFT JOIN quimicos_bodegas b ON b.codigo = r.bodega
+                WHERE r.n_recepcion = ?
+                LIMIT 1";
+
+        $stmt = mysqli_prepare($conexion, $sql);
+        mysqli_stmt_bind_param($stmt, 'i', $nRecepcion);
+        mysqli_stmt_execute($stmt);
+
+        $result = mysqli_stmt_get_result($stmt);
+        $data = false;
+
+        if ($row = mysqli_fetch_assoc($result)) {
+            $data = $row;
         }
 
         mysqli_stmt_close($stmt);
