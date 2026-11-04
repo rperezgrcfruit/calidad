@@ -22,8 +22,11 @@
     
     <!-- Tabla de recepciones -->
     <div class="card shadow-sm">
-        <div class="card-header bg-success text-white">
+        <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
             <h5 class="mb-0">Listado de Recepciones</h5>
+            <?php if (isset($pag)): ?>
+                <span class="badge bg-light text-success"><?php echo number_format($pag['total'], 0, ',', '.'); ?> registros</span>
+            <?php endif; ?>
         </div>
         <div class="card-body">
             <?php if (isset($result) && count($result) > 0): ?>
@@ -43,7 +46,7 @@
                         <tbody>
                             <?php foreach ($result as $index => $recepcion): ?>
                                 <tr>
-                                    <td><?php echo $index + 1; ?></td>
+                                    <td><?php echo ($pag['offset'] ?? 0) + $index + 1; ?></td>
                                     <td>
                                         <strong><?php echo htmlspecialchars($recepcion['lote']); ?></strong>
                                     </td>
@@ -79,6 +82,12 @@
                     </a>
                 </div>
             <?php endif; ?>
+
+            <?php
+            $pagUrl = '/calidad/recepcion-calidad';
+            $pagParams = [];
+            include RUTA . '/calidad/view/layouts/pagination.php';
+            ?>
         </div>
     </div>
 </div>

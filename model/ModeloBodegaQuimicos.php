@@ -71,6 +71,46 @@ class ModeloBodegaQuimicos
         }
         return [];
     }
+
+    /**
+     * Contar quimicos del catalogo
+     */
+    public function contarQuimicos($conexion)
+    {
+        $result = mysqli_query($conexion, "SELECT COUNT(*) AS total FROM quimicos");
+        $total = 0;
+
+        if ($result && $row = mysqli_fetch_assoc($result)) {
+            $total = (int) $row['total'];
+        }
+
+        return $total;
+    }
+
+    /**
+     * Obtener quimicos paginados
+     */
+    public function obtenerQuimicosPaginados($conexion, $limit, $offset)
+    {
+        $limit  = (int) $limit;
+        $offset = (int) $offset;
+
+        $sql = "SELECT codigo, nombre, tipo, unidad_medida, registro_sag FROM quimicos ORDER BY codigo LIMIT ? OFFSET ?";
+        $stmt = mysqli_prepare($conexion, $sql);
+        mysqli_stmt_bind_param($stmt, 'ii', $limit, $offset);
+        mysqli_stmt_execute($stmt);
+
+        $result = mysqli_stmt_get_result($stmt);
+        $data = [];
+
+        if ($result && $result->num_rows > 0) {
+            $data = mysqli_fetch_all($result, MYSQLI_ASSOC);
+        }
+
+        mysqli_stmt_close($stmt);
+
+        return $data;
+    }
     
     // =============================
     // BODEGAS DE QUIMICOS
@@ -183,43 +223,54 @@ class ModeloBodegaQuimicos
     }
     
     /**
+     * Construye el WHERE de recepciones según filtros
+     * @return array [string $where, array $params, string $types]
+     */
+    private function filtroRecepciones($filtros)
+    {
+        $where = " WHERE 1=1";
+        $params = [];
+        $types = '';
+
+        if (!empty($filtros['desde'])) {
+            $where .= " AND r.fecha >= ? ";
+            $params[] = $filtros['desde'];
+            $types .= 's';
+        }
+
+        if (!empty($filtros['hasta'])) {
+            $where .= " AND r.fecha <= ? ";
+            $params[] = $filtros['hasta'];
+            $types .= 's';
+        }
+
+        if (!empty($filtros['bodega'])) {
+            $where .= " AND r.bodega = ? ";
+            $params[] = $filtros['bodega'];
+            $types .= 's';
+        }
+
+        if (!empty($filtros['proveedor'])) {
+            $where .= " AND r.proveedor = ? ";
+            $params[] = $filtros['proveedor'];
+            $types .= 's';
+        }
+
+        return [$where, $params, $types];
+    }
+
+    /**
      * Obtener recepciones con filtros
      */
     public function obtenerRecepciones($conexion, $filtros = [])
     {
+        list($where, $params, $types) = $this->filtroRecepciones($filtros);
+
         $sql = "SELECT r.n_recepcion, r.fecha, b.nombre AS bodega_nombre, r.proveedor, r.guia, r.factura, r.lote_proveedor
                 FROM quimicos_recepcion r
-                LEFT JOIN quimicos_bodegas b ON b.codigo = r.bodega
-                WHERE 1=1";
-        
-        $params = [];
-        $types = '';
-        
-        if (!empty($filtros['desde'])) {
-            $sql .= " AND r.fecha >= ? ";
-            $params[] = $filtros['desde'];
-            $types .= 's';
-        }
-        
-        if (!empty($filtros['hasta'])) {
-            $sql .= " AND r.fecha <= ? ";
-            $params[] = $filtros['hasta'];
-            $types .= 's';
-        }
-        
-        if (!empty($filtros['bodega'])) {
-            $sql .= " AND r.bodega = ? ";
-            $params[] = $filtros['bodega'];
-            $types .= 's';
-        }
-        
-        if (!empty($filtros['proveedor'])) {
-            $sql .= " AND r.proveedor = ? ";
-            $params[] = $filtros['proveedor'];
-            $types .= 's';
-        }
-        
-        $sql .= " ORDER BY r.fecha DESC, r.n_recepcion";
+                LEFT JOIN quimicos_bodegas b ON b.codigo = r.bodega"
+                . $where .
+                " ORDER BY r.fecha DESC, r.n_recepcion";
         
         $stmt = mysqli_prepare($conexion, $sql);
         if (!empty($params)) {
@@ -235,6 +286,71 @@ class ModeloBodegaQuimicos
         }
         mysqli_stmt_close($stmt);
         return [];
+    }
+
+    /**
+     * Contar recepciones según filtros
+     */
+    public function contarRecepciones($conexion, $filtros = [])
+    {
+        list($where, $params, $types) = $this->filtroRecepciones($filtros);
+
+        $sql = "SELECT COUNT(*) AS total
+                FROM quimicos_recepcion r
+                LEFT JOIN quimicos_bodegas b ON b.codigo = r.bodega" . $where;
+
+        $stmt = mysqli_prepare($conexion, $sql);
+        if (!empty($params)) {
+            mysqli_stmt_bind_param($stmt, $types, ...$params);
+        }
+        mysqli_stmt_execute($stmt);
+        $result = mysqli_stmt_get_result($stmt);
+
+        $total = 0;
+        if ($result && $row = mysqli_fetch_assoc($result)) {
+            $total = (int) $row['total'];
+        }
+
+        mysqli_stmt_close($stmt);
+
+        return $total;
+    }
+
+    /**
+     * Obtener recepciones paginadas con filtros
+     */
+    public function obtenerRecepcionesPaginadas($conexion, $filtros = [], $limit = 25, $offset = 0)
+    {
+        list($where, $params, $types) = $this->filtroRecepciones($filtros);
+
+        $limit  = (int) $limit;
+        $offset = (int) $offset;
+
+        $sql = "SELECT r.n_recepcion, r.fecha, b.nombre AS bodega_nombre, r.proveedor, r.guia, r.factura, r.lote_proveedor
+                FROM quimicos_recepcion r
+                LEFT JOIN quimicos_bodegas b ON b.codigo = r.bodega"
+                . $where .
+                " ORDER BY r.fecha DESC, r.n_recepcion LIMIT ? OFFSET ?";
+
+        $stmt = mysqli_prepare($conexion, $sql);
+
+        $params[] = $limit;
+        $params[] = $offset;
+        $types .= 'ii';
+
+        mysqli_stmt_bind_param($stmt, $types, ...$params);
+        mysqli_stmt_execute($stmt);
+
+        $result = mysqli_stmt_get_result($stmt);
+        $data = [];
+
+        if ($result && $result->num_rows > 0) {
+            $data = mysqli_fetch_all($result, MYSQLI_ASSOC);
+        }
+
+        mysqli_stmt_close($stmt);
+
+        return $data;
     }
     
     /**

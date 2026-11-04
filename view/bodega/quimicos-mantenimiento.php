@@ -22,7 +22,7 @@
     <?php if (isset($quimicos) && count($quimicos) > 0): ?>
         <div class="card shadow-sm">
             <div class="card-header bg-primary text-white">
-                <h5 class="mb-0">Lista de Químicos (<?php echo count($quimicos); ?> registros)</h5>
+                <h5 class="mb-0">Lista de Químicos (<?php echo number_format($pag['total'] ?? count($quimicos), 0, ',', '.'); ?> registros)</h5>
             </div>
             <div class="card-body">
                 <div class="table-responsive">
@@ -68,6 +68,12 @@
                         </tbody>
                     </table>
                 </div>
+
+                <?php
+                $pagUrl = '/calidad/bodega-quimicos/quimicos';
+                $pagParams = [];
+                include RUTA . '/calidad/view/layouts/pagination.php';
+                ?>
             </div>
         </div>
     <?php else: ?>

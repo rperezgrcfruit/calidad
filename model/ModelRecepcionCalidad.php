@@ -24,6 +24,49 @@ class ModelRecepcionCalidad{
         }
     }
 
+    public function ContarRecepciones($conexion, $empresa, $temporada){
+        $sql = mysqli_prepare($conexion, 'SELECT COUNT(*) AS total
+         FROM recepcion_calidad INNER JOIN recepcion_granel ON recepcion_calidad.lote = recepcion_granel.lote INNER JOIN productores ON recepcion_granel.productor = productores.codigo WHERE recepcion_calidad.cliente = ?
+        and recepcion_granel.exportadora = ? and recepcion_calidad.temporada = ? and recepcion_granel.temporada = ? and productores.empresa = ?');
+        mysqli_stmt_bind_param($sql, 'sssss', $empresa, $empresa, $temporada, $temporada, $empresa);
+        mysqli_stmt_execute($sql);
+
+        $result = mysqli_stmt_get_result($sql);
+        $total = 0;
+
+        if ($row = mysqli_fetch_assoc($result)) {
+            $total = (int) $row['total'];
+        }
+
+        mysqli_stmt_close($sql);
+
+        return $total;
+    }
+
+    public function GetRecepcionesPaginadas($conexion, $empresa, $temporada, $limit, $offset){
+        $sql = mysqli_prepare($conexion, 'SELECT recepcion_calidad.lote, recepcion_calidad.fecha_recepcion, recepcion_calidad.fecha_cosecha, recepcion_calidad.hora_control, recepcion_calidad.fecha_inspeccion, recepcion_calidad.cantidad_frutos, recepcion_granel.especie, recepcion_granel.variedad, cantidad_frutos, recepcion_granel.productor,
+        recepcion_granel.cant_bins, recepcion_granel.guia, productores.r_social, productores.rut, productores.ggn
+         FROM recepcion_calidad INNER JOIN recepcion_granel ON recepcion_calidad.lote = recepcion_granel.lote INNER JOIN productores ON recepcion_granel.productor = productores.codigo WHERE recepcion_calidad.cliente = ?
+        and recepcion_granel.exportadora = ? and recepcion_calidad.temporada = ? and recepcion_granel.temporada = ? and productores.empresa = ? ORDER BY recepcion_calidad.lote LIMIT ? OFFSET ?');
+
+        $limit  = (int) $limit;
+        $offset = (int) $offset;
+
+        mysqli_stmt_bind_param($sql, 'sssssii', $empresa, $empresa, $temporada, $temporada, $empresa, $limit, $offset);
+        mysqli_stmt_execute($sql);
+
+        $result = mysqli_stmt_get_result($sql);
+        $data = [];
+
+        if ($result && $result->num_rows > 0) {
+            $data = mysqli_fetch_all($result, MYSQLI_ASSOC);
+        }
+
+        mysqli_stmt_close($sql);
+
+        return $data;
+    }
+
     public function GetRecepcion($conexion, $empresa, $temporada, $lote){
         $sql = mysqli_prepare($conexion, 'SELECT recepcion_calidad.lote, recepcion_calidad.fecha_recepcion, recepcion_calidad.fecha_cosecha, recepcion_calidad.hora_control, recepcion_calidad.fecha_inspeccion, recepcion_calidad.cantidad_frutos, recepcion_granel.especie, recepcion_granel.variedad, cantidad_frutos, recepcion_granel.productor,
         recepcion_granel.cant_bins, recepcion_granel.guia, productores.r_social, productores.rut, productores.ggn, recepcion_calidad.observaciones, recepcion_calidad.recepcionista

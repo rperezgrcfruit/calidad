@@ -3,6 +3,7 @@
 session_start();
 
 require_once 'config/config.php';
+require_once 'config/pagination.php';
 require_once 'config/db.php';
 require_once 'controller/ControllerMainCalidad.php';
 require_once 'controller/ControllerLogin.php';

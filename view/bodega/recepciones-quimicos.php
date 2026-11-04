@@ -65,8 +65,9 @@
         <div class="col-12">
             <?php if (isset($recepciones) && count($recepciones) > 0): ?>
                 <div class="card shadow-sm">
-                    <div class="card-header bg-primary text-white">
-                        <h5 class="mb-0">Resultados (<?php echo count($recepciones); ?> recepciones)</h5>
+                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Resultados</h5>
+                        <span class="badge bg-light text-primary"><?php echo number_format($pag['total'] ?? count($recepciones), 0, ',', '.'); ?> recepciones</span>
                     </div>
                     <div class="card-body">
                         <div class="table-responsive">
@@ -103,14 +104,22 @@
                                 </tbody>
                             </table>
                         </div>
+
+                        <?php
+                        $pagUrl = '/calidad/bodega-quimicos/recepciones';
+                        include RUTA . '/calidad/view/layouts/pagination.php';
+                        ?>
                     </div>
                 </div>
             <?php else: ?>
                 <div class="card shadow-sm">
                     <div class="card-body text-center py-5">
                         <i class="fas fa-file-alt fa-3x text-muted mb-3"></i>
-                        <h5 class="text-muted">No hay recepciones registradas</h5>
-                        <p class="text-muted">Use el botón "Nueva Recepción" para agregar</p>
+                        <h5 class="text-muted">No hay recepciones para los filtros seleccionados</h5>
+                        <p class="text-muted">Ajuste el rango de fechas o use el botón "Nueva Recepción" para agregar</p>
+                        <a href="/calidad/bodega-quimicos/recepciones?desde=2000-01-01&hasta=2100-12-31" class="btn btn-outline-secondary btn-sm">
+                            <i class="fas fa-calendar-alt me-2"></i> Ver todo el historial
+                        </a>
                     </div>
                 </div>
             <?php endif; ?>

@@ -10,7 +10,12 @@ class ControllerRecepcionCalidad
         $temporada = $_SESSION['temporada'];
 
         $model = new ModelRecepcionCalidad();
-        $result = $model->GetRecepciones($conexion, $empresa, $temporada);
+
+        // Paginación
+        $total = $model->ContarRecepciones($conexion, $empresa, $temporada);
+        $pag = paginar($total, 25, $_GET['pagina'] ?? 1);
+
+        $result = $model->GetRecepcionesPaginadas($conexion, $empresa, $temporada, $pag['porPagina'], $pag['offset']);
 
         include_once RUTA . '/calidad/view/calidad/recepcion_calidad.php';
     }

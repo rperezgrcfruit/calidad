@@ -25,6 +25,12 @@ class ControllerDefectos
                 $mensaje = $ok ? 'Defecto eliminado correctamente' : 'No se pudo eliminar el defecto';
                 $tipoMensaje = $ok ? 'success' : 'danger';
             }
+
+            // Redirigir (conservando la página) para limpiar la URL y evitar borrados repetidos
+            $pagina = max(1, (int) ($_GET['pagina'] ?? 1));
+            header('Location: ' . BASE_URL . '/recepcion-calidad/defectos?pagina=' . $pagina
+                . '&msg=' . urlencode($mensaje) . '&tipo=' . $tipoMensaje);
+            exit;
         }
 
         // Insertar defecto (POST)
@@ -54,7 +60,10 @@ class ControllerDefectos
             $tipoMensaje = ($_GET['tipo'] ?? 'success') === 'danger' ? 'danger' : 'success';
         }
 
-        $Defectos = $this->model->GetAllDefectos($conexion);
+        $total = $this->model->ContarDefectos($conexion);
+        $pag = paginar($total, 25, $_GET['pagina'] ?? 1);
+
+        $Defectos = $this->model->GetDefectosPaginados($conexion, $pag['porPagina'], $pag['offset']);
         $tipoDefectos = $this->model->GetAllTipoDefectos($conexion);
 
         include_once RUTA . '/calidad/view/calidad/defectos.php';

@@ -28,7 +28,11 @@ class ControllerBodegaQuimicos
      */
     public function listaQuimicos($conexion)
     {
-        $quimicos = $this->model->obtenerQuimicos($conexion);
+        $total = $this->model->contarQuimicos($conexion);
+        $pag = paginar($total, 25, $_GET['pagina'] ?? 1);
+
+        $quimicos = $this->model->obtenerQuimicosPaginados($conexion, $pag['porPagina'], $pag['offset']);
+
         include_once RUTA . '/calidad/view/bodega/quimicos-mantenimiento.php';
     }
     
@@ -74,10 +78,15 @@ class ControllerBodegaQuimicos
             'proveedor' => $_GET['proveedor'] ?? ''
         ];
         
-        $recepciones = $this->model->obtenerRecepciones($conexion, $filtros);
         $bodegas = $this->model->obtenerBodegas($conexion);
         $proveedores = $this->model->obtenerProveedores($conexion);
-        
+
+        // Paginación conservando filtros
+        $total = $this->model->contarRecepciones($conexion, $filtros);
+        $pag = paginar($total, 20, $_GET['pagina'] ?? 1);
+        $recepciones = $this->model->obtenerRecepcionesPaginadas($conexion, $filtros, $pag['porPagina'], $pag['offset']);
+        $pagParams = $filtros;
+
         include_once RUTA . '/calidad/view/bodega/recepciones-quimicos.php';
     }
     

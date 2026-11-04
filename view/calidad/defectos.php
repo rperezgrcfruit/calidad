@@ -25,8 +25,11 @@
     
     <!-- Tabla de defectos -->
     <div class="card shadow-sm">
-        <div class="card-header bg-danger text-white">
+        <div class="card-header bg-danger text-white d-flex justify-content-between align-items-center">
             <h5 class="mb-0">Defectos Registrados</h5>
+            <?php if (isset($pag)): ?>
+                <span class="badge bg-light text-danger"><?php echo number_format($pag['total'], 0, ',', '.'); ?> registros</span>
+            <?php endif; ?>
         </div>
         <div class="card-body">
             <?php if (isset($Defectos) && count($Defectos) > 0): ?>
@@ -43,11 +46,11 @@
                         <tbody>
                             <?php foreach ($Defectos as $index => $defecto): ?>
                                 <tr>
-                                    <td><?php echo $index + 1; ?></td>
+                                    <td><?php echo ($pag['offset'] ?? 0) + $index + 1; ?></td>
                                     <td><span class="badge bg-warning text-dark"><?php echo htmlspecialchars($defecto['tipo_defecto']); ?></span></td>
                                     <td><?php echo htmlspecialchars($defecto['descripcion']); ?></td>
                                     <td class="text-center">
-                                        <a href="/calidad/recepcion-calidad/defectos/?delete=<?php echo $defecto['id']; ?>" 
+                                        <a href="/calidad/recepcion-calidad/defectos?delete=<?php echo urlencode($defecto['id']); ?>&pagina=<?php echo (int) ($pag['pagina'] ?? 1); ?>" 
                                            class="btn btn-sm btn-outline-danger" 
                                            title="Eliminar"
                                            onclick="return confirm('¿Está seguro de eliminar este defecto?')">
@@ -65,6 +68,12 @@
                     <h5 class="text-muted">No hay defectos registrados</h5>
                 </div>
             <?php endif; ?>
+
+            <?php
+            $pagUrl = '/calidad/recepcion-calidad/defectos';
+            $pagParams = [];
+            include RUTA . '/calidad/view/layouts/pagination.php';
+            ?>
         </div>
     </div>
     
