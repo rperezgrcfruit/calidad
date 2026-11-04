@@ -33,6 +33,8 @@ class ControllerBodegaQuimicos
 
         $quimicos = $this->model->obtenerQuimicosPaginados($conexion, $pag['porPagina'], $pag['offset']);
 
+        [$mensaje, $tipoMensaje] = $this->flash();
+
         include_once RUTA . '/calidad/view/bodega/quimicos-mantenimiento.php';
     }
     
@@ -42,6 +44,9 @@ class ControllerBodegaQuimicos
     public function listaBodegas($conexion)
     {
         $bodegas = $this->model->obtenerBodegas($conexion);
+
+        [$mensaje, $tipoMensaje] = $this->flash();
+
         include_once RUTA . '/calidad/view/bodega/bodegas-mantenimiento.php';
     }
     
@@ -51,6 +56,9 @@ class ControllerBodegaQuimicos
     public function listaProveedores($conexion)
     {
         $proveedores = $this->model->obtenerProveedores($conexion);
+
+        [$mensaje, $tipoMensaje] = $this->flash();
+
         include_once RUTA . '/calidad/view/bodega/proveedores-mantenimiento.php';
     }
     
@@ -61,7 +69,174 @@ class ControllerBodegaQuimicos
     {
         return $this->model->buscarQuimico($conexion, $codigo);
     }
-    
+
+    // ============================================================
+    // MANTENEDORES: QUIMICOS, BODEGAS Y PROVEEDORES
+    // ============================================================
+
+    /**
+     * Crear / editar / dar de baja un químico
+     */
+    public function guardarQuimico($conexion)
+    {
+        $this->soloPost();
+
+        if (!$this->csrfValido()) {
+            $this->volver('/bodega-quimicos/quimicos', 'Sesión expirada. Intente nuevamente.', 'danger');
+        }
+
+        $accion = $_POST['accion'] ?? 'crear';
+        $codigo = strtoupper(trim((string) ($_POST['codigo'] ?? '')));
+        $nombre = trim((string) ($_POST['nombre'] ?? ''));
+        $tipo   = trim((string) ($_POST['tipo'] ?? ''));
+        $unidad = trim((string) ($_POST['unidad_medida'] ?? ''));
+        $sag    = trim((string) ($_POST['registro_sag'] ?? ''));
+
+        if ($accion === 'eliminar') {
+            if ($codigo === '') {
+                $this->volver('/bodega-quimicos/quimicos', 'Código inválido.', 'danger');
+            }
+            $ok = $this->model->desactivarQuimico($conexion, $codigo);
+            $this->volver('/bodega-quimicos/quimicos', $ok ? 'Químico dado de baja' : 'No se pudo dar de baja', $ok ? 'success' : 'danger');
+        }
+
+        $tipos = ['FUMIGANTE', 'FUNGICIDA', 'INSECTICIDA', 'HERBICIDA', 'FERTILIZANTE FOLIAR', 'DESVERTIDIZANTE', 'OTRO'];
+        $unidades = ['LT', 'KG', 'GR', 'ML', 'UND'];
+
+        if ($codigo === '' || $nombre === '') {
+            $this->volver('/bodega-quimicos/quimicos', 'Código y nombre son obligatorios.', 'danger');
+        }
+        if (mb_strlen($codigo) > 10 || mb_strlen($nombre) > 100 || mb_strlen($sag) > 50) {
+            $this->volver('/bodega-quimicos/quimicos', 'Largo de campos excedido.', 'danger');
+        }
+        if ($tipo !== '' && !in_array($tipo, $tipos, true)) {
+            $this->volver('/bodega-quimicos/quimicos', 'Tipo de químico inválido.', 'danger');
+        }
+        if ($unidad !== '' && !in_array($unidad, $unidades, true)) {
+            $this->volver('/bodega-quimicos/quimicos', 'Unidad inválida.', 'danger');
+        }
+
+        $datos = [
+            'codigo'       => $codigo,
+            'nombre'       => $nombre,
+            'tipo'         => $tipo,
+            'unidad_medida' => $unidad,
+            'registro_sag' => $sag,
+        ];
+
+        if ($accion === 'editar') {
+            $ok = $this->model->actualizarQuimico($conexion, $datos);
+            $this->volver('/bodega-quimicos/quimicos', $ok ? 'Químico actualizado' : 'No se pudo actualizar', $ok ? 'success' : 'danger');
+        }
+
+        // crear
+        if ($this->model->buscarQuimico($conexion, $codigo)) {
+            $this->volver('/bodega-quimicos/quimicos', 'El código ' . $codigo . ' ya existe.', 'danger');
+        }
+
+        $ok = $this->model->insertarQuimico($conexion, $datos);
+        $this->volver('/bodega-quimicos/quimicos', $ok ? 'Químico creado' : 'No se pudo crear el químico', $ok ? 'success' : 'danger');
+    }
+
+    /**
+     * Crear / editar / eliminar una bodega
+     */
+    public function guardarBodega($conexion)
+    {
+        $this->soloPost();
+
+        if (!$this->csrfValido()) {
+            $this->volver('/bodega-quimicos/bodegas', 'Sesión expirada. Intente nuevamente.', 'danger');
+        }
+
+        $accion = $_POST['accion'] ?? 'crear';
+        $codigo = strtoupper(trim((string) ($_POST['codigo'] ?? '')));
+        $nombre = trim((string) ($_POST['nombre'] ?? ''));
+
+        if ($accion === 'eliminar') {
+            if ($codigo === '') {
+                $this->volver('/bodega-quimicos/bodegas', 'Código inválido.', 'danger');
+            }
+            $ok = $this->model->eliminarBodega($conexion, $codigo);
+            $this->volver('/bodega-quimicos/bodegas', $ok ? 'Bodega eliminada' : 'No se pudo eliminar', $ok ? 'success' : 'danger');
+        }
+
+        if ($codigo === '' || $nombre === '') {
+            $this->volver('/bodega-quimicos/bodegas', 'Código y nombre son obligatorios.', 'danger');
+        }
+        if (mb_strlen($codigo) > 10 || mb_strlen($nombre) > 60) {
+            $this->volver('/bodega-quimicos/bodegas', 'Largo de campos excedido.', 'danger');
+        }
+
+        if ($accion === 'editar') {
+            $ok = $this->model->actualizarBodega($conexion, $codigo, $nombre);
+            $this->volver('/bodega-quimicos/bodegas', $ok ? 'Bodega actualizada' : 'No se pudo actualizar', $ok ? 'success' : 'danger');
+        }
+
+        if ($this->model->buscarBodega($conexion, $codigo)) {
+            $this->volver('/bodega-quimicos/bodegas', 'El código ' . $codigo . ' ya existe.', 'danger');
+        }
+
+        $ok = $this->model->insertarBodega($conexion, $codigo, $nombre);
+        $this->volver('/bodega-quimicos/bodegas', $ok ? 'Bodega creada' : 'No se pudo crear la bodega', $ok ? 'success' : 'danger');
+    }
+
+    /**
+     * Crear / editar / eliminar un proveedor
+     */
+    public function guardarProveedor($conexion)
+    {
+        $this->soloPost();
+
+        if (!$this->csrfValido()) {
+            $this->volver('/bodega-quimicos/proveedores', 'Sesión expirada. Intente nuevamente.', 'danger');
+        }
+
+        $accion = $_POST['accion'] ?? 'crear';
+        $id = (int) ($_POST['id'] ?? 0);
+
+        if ($accion === 'eliminar') {
+            if ($id <= 0) {
+                $this->volver('/bodega-quimicos/proveedores', 'Proveedor inválido.', 'danger');
+            }
+            $ok = $this->model->eliminarProveedor($conexion, $id);
+            $this->volver('/bodega-quimicos/proveedores', $ok ? 'Proveedor eliminado' : 'No se pudo eliminar', $ok ? 'success' : 'danger');
+        }
+
+        $datos = [
+            'id'        => $id,
+            'codigo'    => trim((string) ($_POST['codigo'] ?? '')),
+            'nombre'    => trim((string) ($_POST['nombre'] ?? '')),
+            'contacto'  => trim((string) ($_POST['contacto'] ?? '')),
+            'telefono'  => trim((string) ($_POST['telefono'] ?? '')),
+            'email'     => trim((string) ($_POST['email'] ?? '')),
+            'direccion' => trim((string) ($_POST['direccion'] ?? '')),
+        ];
+
+        if ($datos['nombre'] === '') {
+            $this->volver('/bodega-quimicos/proveedores', 'El nombre es obligatorio.', 'danger');
+        }
+        if (mb_strlen($datos['codigo']) > 20 || mb_strlen($datos['nombre']) > 100
+            || mb_strlen($datos['contacto']) > 100 || mb_strlen($datos['telefono']) > 20
+            || mb_strlen($datos['email']) > 100 || mb_strlen($datos['direccion']) > 200) {
+            $this->volver('/bodega-quimicos/proveedores', 'Largo de campos excedido.', 'danger');
+        }
+        if ($datos['email'] !== '' && !filter_var($datos['email'], FILTER_VALIDATE_EMAIL)) {
+            $this->volver('/bodega-quimicos/proveedores', 'El email no es válido.', 'danger');
+        }
+
+        if ($accion === 'editar') {
+            if ($id <= 0 || !$this->model->obtenerProveedor($conexion, $id)) {
+                $this->volver('/bodega-quimicos/proveedores', 'Proveedor no encontrado.', 'danger');
+            }
+            $ok = $this->model->actualizarProveedor($conexion, $datos);
+            $this->volver('/bodega-quimicos/proveedores', $ok ? 'Proveedor actualizado' : 'No se pudo actualizar', $ok ? 'success' : 'danger');
+        }
+
+        $ok = $this->model->insertarProveedor($conexion, $datos);
+        $this->volver('/bodega-quimicos/proveedores', $ok ? 'Proveedor creado' : 'No se pudo crear el proveedor', $ok ? 'success' : 'danger');
+    }
+
     // ============================================================
     // RECEPCIONES DE QUIMICOS
     // ============================================================
@@ -321,6 +496,10 @@ class ControllerBodegaQuimicos
 
         $detalle = $this->model->obtenerDetalleRecepcion($conexion, $nRecepcion) ?: [];
         $mensaje = isset($_GET['msg']) ? substr((string) $_GET['msg'], 0, 200) : '';
+        $tipoMensaje = $_GET['tipo'] ?? 'success';
+        if (!in_array($tipoMensaje, ['success', 'danger', 'warning', 'info'], true)) {
+            $tipoMensaje = 'success';
+        }
 
         include_once RUTA . '/calidad/view/bodega/detalle-recepcion.php';
     }
@@ -393,6 +572,198 @@ class ControllerBodegaQuimicos
     private function redirigirRecepciones()
     {
         header('Location: ' . BASE_URL . '/bodega-quimicos/recepciones');
+        exit;
+    }
+
+    // ============================================================
+    // GUIA (PDF/imagen) - misma API que usa la aplicación VB.NET
+    // ============================================================
+
+    /**
+     * Sube la GUIA de una recepción a la API de archivos
+     */
+    public function subirGuia($conexion)
+    {
+        $this->soloPost();
+
+        $n = (int) ($_POST['recepcion'] ?? 0);
+        $volver = '/bodega-quimicos/recepciones/detalle?recepcion=' . $n;
+
+        if (!$this->csrfValido()) {
+            $this->volver($volver, 'Sesión expirada. Intente nuevamente.', 'danger');
+        }
+        if ($n <= 0 || !$this->model->obtenerRecepcion($conexion, $n)) {
+            $this->volver('/bodega-quimicos/recepciones', 'Recepción no encontrada.', 'danger');
+        }
+
+        if (!isset($_FILES['guia']) || $_FILES['guia']['error'] !== UPLOAD_ERR_OK) {
+            $this->volver($volver, 'No se recibió el archivo (o excede el tamaño permitido).', 'danger');
+        }
+
+        $archivo = $_FILES['guia'];
+
+        if ($archivo['size'] <= 0 || $archivo['size'] > 20 * 1024 * 1024) {
+            $this->volver($volver, 'El archivo debe pesar entre 1 byte y 20 MB.', 'danger');
+        }
+
+        $ext = strtolower(pathinfo($archivo['name'], PATHINFO_EXTENSION));
+        if (!in_array($ext, ['pdf', 'jpg', 'jpeg', 'png'], true)) {
+            $this->volver($volver, 'Formato no permitido. Use PDF, JPG o PNG.', 'danger');
+        }
+
+        // Nombre: quimicos_{n:06d}_{YYYYMMDD_HHMMSS}.{ext}
+        $nombre = sprintf('quimicos_%06d_%s.%s', $n, date('Ymd_His'), $ext);
+        $url = $this->apiUrl('uploadRecepcionQuimicos.php');
+
+        $mime = function_exists('mime_content_type') ? (mime_content_type($archivo['tmp_name']) ?: 'application/octet-stream') : 'application/octet-stream';
+
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_POST           => true,
+            CURLOPT_POSTFIELDS     => ['fileToUpload' => new CURLFile($archivo['tmp_name'], $mime, $nombre)],
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT        => 300,
+            CURLOPT_CONNECTTIMEOUT => 20,
+        ]);
+
+        $respuesta = curl_exec($ch);
+        $httpCode  = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $errorCurl = curl_error($ch);
+        curl_close($ch);
+
+        if ($respuesta === false) {
+            $this->volver($volver, 'No se pudo conectar con el servidor de archivos: ' . $errorCurl, 'danger');
+        }
+        if ($httpCode < 200 || $httpCode >= 300) {
+            $this->volver($volver, 'El servidor de archivos respondió HTTP ' . $httpCode . '. ' . substr(trim((string) $respuesta), 0, 150), 'danger');
+        }
+
+        $this->volver($volver, 'GUIA subida correctamente: ' . $nombre, 'success');
+    }
+
+    /**
+     * Muestra la última GUIA subida para una recepción (proxy del PDF)
+     */
+    public function verGuia($conexion)
+    {
+        $n = (int) ($_GET['recepcion'] ?? 0);
+        $volver = '/bodega-quimicos/recepciones/detalle?recepcion=' . $n;
+
+        if ($n <= 0 || !$this->model->obtenerRecepcion($conexion, $n)) {
+            $this->volver('/bodega-quimicos/recepciones', 'Recepción no encontrada.', 'danger');
+        }
+
+        $prefijo = sprintf('quimicos_%06d', $n);
+
+        // 1) Listar archivos: devuelve un nombre, una lista "a|b" o "NO_FILES"
+        $lista = $this->apiGet('listRecepcionQuimicos.php?prefix=' . urlencode($prefijo), 30);
+        $nombreArchivo = '';
+
+        if ($lista['ok']) {
+            $texto = trim($lista['body']);
+
+            if (strpos($texto, '|') !== false) {
+                $partes = explode('|', $texto);
+                $nombreArchivo = trim((string) end($partes));
+            } elseif ($texto !== '' && $texto !== 'NO_FILES') {
+                $nombreArchivo = $texto;
+            }
+        }
+
+        if ($nombreArchivo === '') {
+            $this->volver($volver, 'No hay GUIA subida para esta recepción.', 'warning');
+        }
+
+        // 2) Descargar desde la API
+        $descarga = $this->apiGet('downloadRecepcionQuimicos.php?fileName=' . urlencode($nombreArchivo), 120);
+
+        if (!$descarga['ok'] || $descarga['body'] === '') {
+            $this->volver($volver, 'No se pudo obtener la GUIA desde el servidor de archivos.', 'danger');
+        }
+
+        $nombreSeguro = preg_replace('/[^A-Za-z0-9._-]/', '_', basename($nombreArchivo));
+        $tipo = $descarga['type'] ?: (strtolower(pathinfo($nombreArchivo, PATHINFO_EXTENSION)) === 'pdf' ? 'application/pdf' : 'application/octet-stream');
+
+        header('Content-Type: ' . $tipo);
+        header('Content-Disposition: inline; filename="' . $nombreSeguro . '"');
+        header('Content-Length: ' . strlen($descarga['body']));
+        header('Cache-Control: private, max-age=0, must-revalidate');
+
+        echo $descarga['body'];
+        exit;
+    }
+
+    /**
+     * URL de la API de archivos (misma que usa la app VB.NET)
+     */
+    private function apiUrl($script)
+    {
+        $base = env('QUIMICOS_API_URL', 'http://app.grcfruit.cl/apis/backup_files');
+        return rtrim($base, '/') . '/' . ltrim($script, '/');
+    }
+
+    /**
+     * GET a la API de archivos
+     * @return array{ok:bool,body:string,type:string,code:int}
+     */
+    private function apiGet($ruta, $timeout = 60)
+    {
+        $ch = curl_init($this->apiUrl($ruta));
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_TIMEOUT        => $timeout,
+            CURLOPT_CONNECTTIMEOUT => 20,
+        ]);
+
+        $body = curl_exec($ch);
+        $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $type = (string) curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
+        curl_close($ch);
+
+        return [
+            'ok'   => ($body !== false && $code >= 200 && $code < 300),
+            'body' => $body === false ? '' : $body,
+            'type' => $type,
+            'code' => $code,
+        ];
+    }
+
+    private function soloPost()
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->redirigirRecepciones();
+        }
+    }
+
+    private function csrfValido()
+    {
+        return isset($_POST['csrf_token']) && validateCSRFToken($_POST['csrf_token']);
+    }
+
+    /**
+     * Mensaje flash desde la URL
+     * @return array [mensaje, tipo]
+     */
+    private function flash()
+    {
+        $mensaje = isset($_GET['msg']) ? substr((string) $_GET['msg'], 0, 200) : '';
+        $tipo = $_GET['tipo'] ?? 'success';
+
+        if (!in_array($tipo, ['success', 'danger', 'warning', 'info'], true)) {
+            $tipo = 'success';
+        }
+
+        return [$mensaje, $tipo];
+    }
+
+    /**
+     * Redirige con mensaje flash por query string
+     */
+    private function volver($ruta, $mensaje, $tipo = 'success')
+    {
+        $separador = (strpos($ruta, '?') !== false) ? '&' : '?';
+        header('Location: ' . BASE_URL . $ruta . $separador . 'msg=' . urlencode($mensaje) . '&tipo=' . $tipo);
         exit;
     }
 }

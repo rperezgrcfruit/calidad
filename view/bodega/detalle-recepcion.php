@@ -34,11 +34,42 @@ $fmtUsd = function ($v) {
     </div>
 
     <?php if (!empty($mensaje)): ?>
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            <i class="fas fa-check-circle me-2"></i><?php echo htmlspecialchars($mensaje); ?>
+        <div class="alert alert-<?php echo htmlspecialchars($tipoMensaje ?? 'success'); ?> alert-dismissible fade show" role="alert">
+            <i class="fas fa-info-circle me-2"></i><?php echo htmlspecialchars($mensaje); ?>
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     <?php endif; ?>
+
+    <!-- GUIA adjunta -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="fas fa-paperclip me-2"></i>GUIA Adjunta</h5>
+        </div>
+        <div class="card-body">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-6">
+                    <form method="post" action="/calidad/bodega-quimicos/recepciones/guia/subir" enctype="multipart/form-data">
+                        <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars(generateCSRFToken()); ?>">
+                        <input type="hidden" name="recepcion" value="<?php echo (int) $recepcion['n_recepcion']; ?>">
+                        <label class="form-label" for="guia_archivo">Subir GUIA (PDF, JPG o PNG · máx. 20 MB)</label>
+                        <div class="d-flex gap-2">
+                            <input type="file" class="form-control" name="guia" id="guia_archivo" accept=".pdf,.jpg,.jpeg,.png" required>
+                            <button type="submit" class="btn btn-success text-nowrap">
+                                <i class="fas fa-upload me-2"></i> Subir
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                <div class="col-md-6">
+                    <a href="/calidad/bodega-quimicos/recepciones/guia/ver?recepcion=<?php echo (int) $recepcion['n_recepcion']; ?>"
+                       target="_blank" rel="noopener" class="btn btn-outline-primary">
+                        <i class="fas fa-file-pdf me-2"></i> Ver GUIA
+                    </a>
+                    <small class="d-block text-muted mt-1">Muestra la última GUIA cargada para esta recepción.</small>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <div class="row g-4 mb-4">
         <!-- Cabecera -->

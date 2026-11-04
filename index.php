@@ -146,11 +146,23 @@ switch ($request_uri['path']) {
     case '/calidad/bodega-quimicos/recepciones/detalle':
         $bodegaQuimicos->verDetalle($conexion);
         break;
-    
+
+    case '/calidad/bodega-quimicos/recepciones/guia/subir':
+        $bodegaQuimicos->subirGuia($conexion);
+        break;
+
+    case '/calidad/bodega-quimicos/recepciones/guia/ver':
+        $bodegaQuimicos->verGuia($conexion);
+        break;
+
     case '/calidad/bodega-quimicos/quimicos':
         $bodegaQuimicos->listaQuimicos($conexion);
         break;
-    
+
+    case '/calidad/bodega-quimicos/quimicos/guardar':
+        $bodegaQuimicos->guardarQuimico($conexion);
+        break;
+
     case '/calidad/bodega-quimicos/buscar':
         $codigo = $_GET['codigo'] ?? '';
         if ($codigo) {
@@ -163,9 +175,17 @@ switch ($request_uri['path']) {
     case '/calidad/bodega-quimicos/bodegas':
         $bodegaQuimicos->listaBodegas($conexion);
         break;
+
+    case '/calidad/bodega-quimicos/bodegas/guardar':
+        $bodegaQuimicos->guardarBodega($conexion);
+        break;
     
     case '/calidad/bodega-quimicos/proveedores':
         $bodegaQuimicos->listaProveedores($conexion);
+        break;
+
+    case '/calidad/bodega-quimicos/proveedores/guardar':
+        $bodegaQuimicos->guardarProveedor($conexion);
         break;
 
     // =======================

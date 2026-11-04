@@ -11,9 +11,11 @@ class ModeloBodegaQuimicos
      */
     public function buscarQuimico($conexion, $codigo)
     {
+        $codigo = strtoupper(trim((string) $codigo));
+
         $sql = "SELECT codigo, nombre, tipo, unidad_medida, registro_sag FROM quimicos WHERE codigo = ? LIMIT 1";
         $stmt = mysqli_prepare($conexion, $sql);
-        mysqli_stmt_bind_param($stmt, 's', strtoupper($codigo));
+        mysqli_stmt_bind_param($stmt, 's', $codigo);
         mysqli_stmt_execute($stmt);
         $result = mysqli_stmt_get_result($stmt);
         
@@ -30,10 +32,12 @@ class ModeloBodegaQuimicos
      */
     public function insertarQuimico($conexion, $datos)
     {
-        $sql = "INSERT INTO quimicos (codigo, nombre, tipo, unidad_medida, registro_sag) VALUES (?, ?, ?, ?, ?)";
+        $codigo = strtoupper((string) $datos['codigo']);
+
+        $sql = "INSERT INTO quimicos (codigo, nombre, tipo, unidad_medida, registro_sag, activo) VALUES (?, ?, ?, ?, ?, 1)";
         $stmt = mysqli_prepare($conexion, $sql);
         mysqli_stmt_bind_param($stmt, 'sssss',
-            strtoupper($datos['codigo']),
+            $codigo,
             $datos['nombre'],
             $datos['tipo'],
             $datos['unidad_medida'],
@@ -43,21 +47,46 @@ class ModeloBodegaQuimicos
         mysqli_stmt_close($stmt);
         return $result;
     }
-    
+
     /**
-     * Eliminar quimico
+     * Actualizar quimico existente (no cambia el código)
      */
-    public function eliminarQuimico($conexion, $codigo)
+    public function actualizarQuimico($conexion, $datos)
     {
-        $sql = "DELETE FROM quimicos WHERE codigo = ?";
+        $codigo = strtoupper((string) $datos['codigo']);
+
+        $sql = "UPDATE quimicos
+                   SET nombre = ?, tipo = ?, unidad_medida = ?, registro_sag = ?
+                 WHERE codigo = ?";
         $stmt = mysqli_prepare($conexion, $sql);
-        mysqli_stmt_bind_param($stmt, 's', strtoupper($codigo));
+        mysqli_stmt_bind_param($stmt, 'sssss',
+            $datos['nombre'],
+            $datos['tipo'],
+            $datos['unidad_medida'],
+            $datos['registro_sag'],
+            $codigo
+        );
+        $result = mysqli_stmt_execute($stmt);
+        mysqli_stmt_close($stmt);
+        return $result;
+    }
+
+    /**
+     * Baja lógica del químico (igual que el VB: activo = 0)
+     */
+    public function desactivarQuimico($conexion, $codigo)
+    {
+        $codigo = strtoupper((string) $codigo);
+
+        $sql = "UPDATE quimicos SET activo = 0 WHERE codigo = ?";
+        $stmt = mysqli_prepare($conexion, $sql);
+        mysqli_stmt_bind_param($stmt, 's', $codigo);
         mysqli_stmt_execute($stmt);
         $affected = mysqli_stmt_affected_rows($stmt);
         mysqli_stmt_close($stmt);
         return $affected > 0;
     }
-    
+
     /**
      * Obtener todos los quimicos
      */
@@ -149,6 +178,47 @@ class ModeloBodegaQuimicos
         return false;
     }
     
+    /**
+     * Insertar bodega
+     */
+    public function insertarBodega($conexion, $codigo, $nombre)
+    {
+        $sql = "INSERT INTO quimicos_bodegas (codigo, nombre, activo) VALUES (?, ?, 1)";
+        $stmt = mysqli_prepare($conexion, $sql);
+        $codigo = strtoupper(trim($codigo));
+        mysqli_stmt_bind_param($stmt, 'ss', $codigo, $nombre);
+        $result = mysqli_stmt_execute($stmt);
+        mysqli_stmt_close($stmt);
+        return $result;
+    }
+
+    /**
+     * Actualizar nombre de bodega
+     */
+    public function actualizarBodega($conexion, $codigo, $nombre)
+    {
+        $sql = "UPDATE quimicos_bodegas SET nombre = ? WHERE codigo = ?";
+        $stmt = mysqli_prepare($conexion, $sql);
+        mysqli_stmt_bind_param($stmt, 'ss', $nombre, $codigo);
+        $result = mysqli_stmt_execute($stmt);
+        mysqli_stmt_close($stmt);
+        return $result;
+    }
+
+    /**
+     * Eliminar bodega (igual que el VB: DELETE físico)
+     */
+    public function eliminarBodega($conexion, $codigo)
+    {
+        $sql = "DELETE FROM quimicos_bodegas WHERE codigo = ?";
+        $stmt = mysqli_prepare($conexion, $sql);
+        mysqli_stmt_bind_param($stmt, 's', $codigo);
+        mysqli_stmt_execute($stmt);
+        $affected = mysqli_stmt_affected_rows($stmt);
+        mysqli_stmt_close($stmt);
+        return $affected > 0;
+    }
+
     // =============================
     // PROVEEDORES DE QUIMICOS
     // =============================
@@ -167,6 +237,85 @@ class ModeloBodegaQuimicos
         return [];
     }
     
+    /**
+     * Buscar proveedor por id
+     */
+    public function obtenerProveedor($conexion, $id)
+    {
+        $sql = "SELECT id, codigo, nombre, contacto, telefono, email, direccion
+                FROM quimicos_proveedores WHERE id = ? AND activo = 1 LIMIT 1";
+        $stmt = mysqli_prepare($conexion, $sql);
+        $id = (int) $id;
+        mysqli_stmt_bind_param($stmt, 'i', $id);
+        mysqli_stmt_execute($stmt);
+        $result = mysqli_stmt_get_result($stmt);
+
+        $row = mysqli_fetch_assoc($result);
+        mysqli_stmt_close($stmt);
+
+        return $row ?: false;
+    }
+
+    /**
+     * Insertar proveedor
+     */
+    public function insertarProveedor($conexion, $datos)
+    {
+        $sql = "INSERT INTO quimicos_proveedores (codigo, nombre, contacto, telefono, email, direccion, activo)
+                VALUES (?, ?, ?, ?, ?, ?, 1)";
+        $stmt = mysqli_prepare($conexion, $sql);
+        mysqli_stmt_bind_param($stmt, 'ssssss',
+            $datos['codigo'],
+            $datos['nombre'],
+            $datos['contacto'],
+            $datos['telefono'],
+            $datos['email'],
+            $datos['direccion']
+        );
+        $result = mysqli_stmt_execute($stmt);
+        mysqli_stmt_close($stmt);
+        return $result;
+    }
+
+    /**
+     * Actualizar proveedor por id
+     */
+    public function actualizarProveedor($conexion, $datos)
+    {
+        $sql = "UPDATE quimicos_proveedores
+                   SET codigo = ?, nombre = ?, contacto = ?, telefono = ?, email = ?, direccion = ?
+                 WHERE id = ? AND activo = 1";
+        $stmt = mysqli_prepare($conexion, $sql);
+        $id = (int) $datos['id'];
+        mysqli_stmt_bind_param($stmt, 'ssssssi',
+            $datos['codigo'],
+            $datos['nombre'],
+            $datos['contacto'],
+            $datos['telefono'],
+            $datos['email'],
+            $datos['direccion'],
+            $id
+        );
+        $result = mysqli_stmt_execute($stmt);
+        mysqli_stmt_close($stmt);
+        return $result;
+    }
+
+    /**
+     * Eliminar proveedor (igual que el VB: DELETE físico)
+     */
+    public function eliminarProveedor($conexion, $id)
+    {
+        $sql = "DELETE FROM quimicos_proveedores WHERE id = ?";
+        $stmt = mysqli_prepare($conexion, $sql);
+        $id = (int) $id;
+        mysqli_stmt_bind_param($stmt, 'i', $id);
+        mysqli_stmt_execute($stmt);
+        $affected = mysqli_stmt_affected_rows($stmt);
+        mysqli_stmt_close($stmt);
+        return $affected > 0;
+    }
+
     // =============================
     // RECEPCIONES DE QUIMICOS
     // =============================

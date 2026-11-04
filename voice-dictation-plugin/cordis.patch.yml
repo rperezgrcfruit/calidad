@@ -1,0 +1,3 @@
+- insert:
+    - id: voice-dictation
+      name: '@local/voice-dictation'

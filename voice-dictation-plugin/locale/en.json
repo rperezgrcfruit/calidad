@@ -1,0 +1,14 @@
+{
+  "meta": {
+    "title": "Voice Dictation",
+    "description": "Adds a microphone button to the message composer for voice-to-text dictation."
+  },
+  "ui": {
+    "start": "Start dictation",
+    "stop": "Stop dictation",
+    "listening": "Listening...",
+    "error": "Voice dictation error",
+    "not_supported": "Speech recognition not supported in this browser",
+    "permission_denied": "Please allow microphone access to use voice dictation"
+  }
+}
