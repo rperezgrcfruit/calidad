@@ -667,4 +667,171 @@ class ModeloBodegaQuimicos
         mysqli_stmt_close($stmt);
         return false;
     }
+
+    // =============================
+    // INFORMES
+    // =============================
+
+    /**
+     * WHERE de recepciones para informes (mismos filtros que el listado)
+     *
+     * @return array [string $where, array $params, string $types]
+     */
+    private function filtroInforme($filtros)
+    {
+        $desde = !empty($filtros['desde']) ? $filtros['desde'] : '2000-01-01';
+        $hasta = !empty($filtros['hasta']) ? $filtros['hasta'] : '2100-12-31';
+
+        $where = " WHERE r.fecha BETWEEN ? AND ? ";
+        $params = [$desde, $hasta];
+        $types = 'ss';
+
+        if (!empty($filtros['bodega'])) {
+            $where .= " AND r.bodega = ? ";
+            $params[] = $filtros['bodega'];
+            $types .= 's';
+        }
+
+        $provId = isset($filtros['proveedor_id']) ? (int) $filtros['proveedor_id'] : 0;
+
+        if ($provId === -1) {
+            $where .= " AND r.proveedor NOT IN (SELECT nombre FROM quimicos_proveedores WHERE activo = 1) ";
+        } elseif ($provId > 0 && !empty($filtros['proveedor_nombre'])) {
+            $where .= " AND r.proveedor = ? ";
+            $params[] = $filtros['proveedor_nombre'];
+            $types .= 's';
+        }
+
+        return [$where, $params, $types];
+    }
+
+    /**
+     * Acumulados de recepción agrupados por químico, bodega, proveedor o mes.
+     *
+     * @param string $agrupar quimico|bodega|proveedor|mes
+     */
+    public function acumuladosRecepcion($conexion, $filtros = [], $agrupar = 'quimico')
+    {
+        list($where, $params, $types) = $this->filtroInforme($filtros);
+
+        $base = " FROM quimicos_recepcion_detalle d
+                  INNER JOIN quimicos_recepcion r ON r.n_recepcion = d.n_recepcion
+                  LEFT JOIN quimicos q ON q.codigo = d.quimico_codigo
+                  LEFT JOIN quimicos_bodegas b ON b.codigo = r.bodega
+                  $where ";
+
+        $metricas = " COUNT(DISTINCT r.n_recepcion) AS recepciones,
+                      IFNULL(SUM(d.cant_envases), 0) AS envases,
+                      IFNULL(SUM(d.contenido_envase), 0) AS contenido,
+                      IFNULL(SUM(d.cantidad_total), 0) AS cantidad ";
+
+        switch ($agrupar) {
+            case 'bodega':
+                $select = "SELECT r.bodega AS clave,
+                                  COALESCE(b.nombre, r.bodega) AS descripcion,
+                                  r.bodega AS detalle,
+                                  $metricas $base
+                           GROUP BY r.bodega, b.nombre
+                           ORDER BY cantidad DESC";
+                break;
+
+            case 'proveedor':
+                $select = "SELECT r.proveedor AS clave,
+                                  r.proveedor AS descripcion,
+                                  '' AS detalle,
+                                  $metricas $base
+                           GROUP BY r.proveedor
+                           ORDER BY cantidad DESC";
+                break;
+
+            case 'mes':
+                $select = "SELECT DATE_FORMAT(r.fecha, '%Y-%m') AS clave,
+                                  DATE_FORMAT(r.fecha, '%Y-%m') AS descripcion,
+                                  '' AS detalle,
+                                  $metricas $base
+                           GROUP BY DATE_FORMAT(r.fecha, '%Y-%m')
+                           ORDER BY clave DESC";
+                break;
+
+            case 'quimico':
+            default:
+                $select = "SELECT d.quimico_codigo AS clave,
+                                  COALESCE(q.nombre, d.quimico_codigo) AS descripcion,
+                                  CONCAT(IFNULL(q.tipo, ''), ' · ', d.unidad) AS detalle,
+                                  $metricas $base
+                           GROUP BY d.quimico_codigo, q.nombre, q.tipo, d.unidad
+                           ORDER BY descripcion";
+                break;
+        }
+
+        $stmt = mysqli_prepare($conexion, $select);
+        mysqli_stmt_bind_param($stmt, $types, ...$params);
+        mysqli_stmt_execute($stmt);
+
+        $result = mysqli_stmt_get_result($stmt);
+        $data = [];
+
+        if ($result && $result->num_rows > 0) {
+            $data = mysqli_fetch_all($result, MYSQLI_ASSOC);
+        }
+
+        mysqli_stmt_close($stmt);
+
+        return $data;
+    }
+
+    /**
+     * Existencia (stock) por químico y bodega, según recepciones registradas.
+     * Nota: aún no descuenta consumos.
+     */
+    public function existencias($conexion, $bodega = '', $buscar = '', $soloConStock = true)
+    {
+        $sql = "SELECT e.quimico_codigo, q.nombre, q.tipo,
+                       e.bodega, COALESCE(b.nombre, e.bodega) AS bodega_nombre,
+                       e.cantidad, e.unidad, e.actualizado
+                FROM quimicos_existencia e
+                LEFT JOIN quimicos q ON q.codigo = e.quimico_codigo
+                LEFT JOIN quimicos_bodegas b ON b.codigo = e.bodega
+                WHERE 1=1";
+
+        $params = [];
+        $types = '';
+
+        if ($bodega !== '') {
+            $sql .= " AND e.bodega = ? ";
+            $params[] = $bodega;
+            $types .= 's';
+        }
+
+        if ($buscar !== '') {
+            $sql .= " AND (e.quimico_codigo LIKE ? OR q.nombre LIKE ?) ";
+            $like = '%' . $buscar . '%';
+            $params[] = $like;
+            $params[] = $like;
+            $types .= 'ss';
+        }
+
+        if ($soloConStock) {
+            $sql .= " AND e.cantidad > 0 ";
+        }
+
+        $sql .= " ORDER BY q.nombre, e.bodega";
+
+        $stmt = mysqli_prepare($conexion, $sql);
+        if ($types !== '') {
+            mysqli_stmt_bind_param($stmt, $types, ...$params);
+        }
+        mysqli_stmt_execute($stmt);
+
+        $result = mysqli_stmt_get_result($stmt);
+        $data = [];
+
+        if ($result && $result->num_rows > 0) {
+            $data = mysqli_fetch_all($result, MYSQLI_ASSOC);
+        }
+
+        mysqli_stmt_close($stmt);
+
+        return $data;
+    }
 }

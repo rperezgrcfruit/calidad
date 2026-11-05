@@ -200,6 +200,29 @@ switch ($path) {
         $bodegaQuimicos->verGuia($conexion);
         break;
 
+    // =======================
+    // INFORMES QUIMICOS
+    // =======================
+    case '/calidad/bodega-quimicos/informes':
+        $bodegaQuimicos->informes($conexion);
+        break;
+
+    case '/calidad/bodega-quimicos/informes/acumulados':
+        $bodegaQuimicos->informeAcumulados($conexion);
+        break;
+
+    case '/calidad/bodega-quimicos/informes/existencia':
+        $bodegaQuimicos->informeExistencias($conexion);
+        break;
+
+    case '/calidad/bodega-quimicos/informes/acumulados.csv':
+        $bodegaQuimicos->exportarAcumulados($conexion);
+        break;
+
+    case '/calidad/bodega-quimicos/informes/existencia.csv':
+        $bodegaQuimicos->exportarExistencias($conexion);
+        break;
+
     case '/calidad/bodega-quimicos/quimicos':
         $bodegaQuimicos->listaQuimicos($conexion);
         break;

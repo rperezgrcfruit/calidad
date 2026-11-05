@@ -71,6 +71,11 @@ if ($isProduction) {
                         </a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link" href="/calidad/bodega-quimicos/informes">
+                            <i class="fas fa-chart-column me-1"></i> Informes
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link" href="/calidad/">
                             <i class="fas fa-layer-group me-1"></i> Módulos
                         </a>

@@ -28,8 +28,7 @@ class ControllerBodegaQuimicos
      */
     public function listaQuimicos($conexion)
     {
-        $total = $this->model->contarQuimicos($conexion);
-        $pag = paginar($total, 25, $_GET['pagina'] ?? 1);
+        $total = $this->model->contarQuimicos($conexion);        $pag = paginar($total, 25, $_GET['pagina'] ?? 1);
 
         $quimicos = $this->model->obtenerQuimicosPaginados($conexion, $pag['porPagina'], $pag['offset']);
 
@@ -60,6 +59,187 @@ class ControllerBodegaQuimicos
         [$mensaje, $tipoMensaje] = $this->flash();
 
         include_once RUTA . '/calidad/view/bodega/proveedores-mantenimiento.php';
+    }
+
+    // ============================================================
+    // INFORMES
+    // ============================================================
+
+    /**
+     * Menú de informes
+     */
+    public function informes($conexion)
+    {
+        include_once RUTA . '/calidad/view/bodega/informes-quimicos.php';
+    }
+
+    /**
+     * Informe: acumulados de recepción de químicos
+     */
+    public function informeAcumulados($conexion)
+    {
+        [$filtros, $agrupar] = $this->parametrosInforme($conexion);
+
+        $bodegas = $this->model->obtenerBodegas($conexion);
+        $proveedores = $this->model->obtenerProveedores($conexion);
+
+        $filas = $this->model->acumuladosRecepcion($conexion, $filtros, $agrupar);
+
+        $totales = [
+            'recepciones' => $this->model->contarRecepciones($conexion, $filtros),
+            'envases'     => array_sum(array_column($filas, 'envases')),
+            'contenido'   => array_sum(array_column($filas, 'contenido')),
+            'cantidad'    => array_sum(array_column($filas, 'cantidad')),
+        ];
+
+        include_once RUTA . '/calidad/view/bodega/informe-acumulados.php';
+    }
+
+    /**
+     * Informe: existencia de químicos por bodega
+     */
+    public function informeExistencias($conexion)
+    {
+        $bodega = trim((string) ($_GET['bodega'] ?? ''));
+        $buscar = trim((string) ($_GET['q'] ?? ''));
+        if (function_exists('mb_substr')) {
+            $buscar = mb_substr($buscar, 0, 60, 'UTF-8');
+        }
+        $soloConStock = !isset($_GET['todos']);
+
+        $bodegas = $this->model->obtenerBodegas($conexion);
+        $filas = $this->model->existencias($conexion, $bodega, $buscar, $soloConStock);
+
+        // Totales por unidad de medida
+        $totalesUnidad = [];
+        foreach ($filas as $f) {
+            $u = $f['unidad'] ?: 'S/U';
+            $totalesUnidad[$u] = ($totalesUnidad[$u] ?? 0) + (float) $f['cantidad'];
+        }
+
+        include_once RUTA . '/calidad/view/bodega/informe-existencia.php';
+    }
+
+    /**
+     * Exporta el informe de acumulados a CSV
+     */
+    public function exportarAcumulados($conexion)
+    {
+        [$filtros, $agrupar] = $this->parametrosInforme($conexion);
+        $filas = $this->model->acumuladosRecepcion($conexion, $filtros, $agrupar);
+
+        $this->descargarCsv('acumulados_quimicos', [
+            'Agrupación', 'Clave', 'Descripción', 'Detalle',
+            'Recepciones', 'Envases', 'Contenido', 'Cantidad total'
+        ], array_map(function ($f) use ($agrupar) {
+            return [
+                $agrupar,
+                $f['clave'],
+                $f['descripcion'],
+                $f['detalle'],
+                (int) $f['recepciones'],
+                number_format((float) $f['envases'], 2, ',', ''),
+                number_format((float) $f['contenido'], 2, ',', ''),
+                number_format((float) $f['cantidad'], 2, ',', ''),
+            ];
+        }, $filas));
+    }
+
+    /**
+     * Exporta el informe de existencias a CSV
+     */
+    public function exportarExistencias($conexion)
+    {
+        $bodega = trim((string) ($_GET['bodega'] ?? ''));
+        $buscar = trim((string) ($_GET['q'] ?? ''));
+        $soloConStock = !isset($_GET['todos']);
+
+        $filas = $this->model->existencias($conexion, $bodega, $buscar, $soloConStock);
+
+        $this->descargarCsv('existencias_quimicos', [
+            'Código', 'Nombre', 'Tipo', 'Bodega', 'Unidad', 'Cantidad', 'Actualizado'
+        ], array_map(function ($f) {
+            return [
+                $f['quimico_codigo'],
+                $f['nombre'],
+                $f['tipo'],
+                $f['bodega_nombre'],
+                $f['unidad'],
+                number_format((float) $f['cantidad'], 2, ',', ''),
+                $f['actualizado'],
+            ];
+        }, $filas));
+    }
+
+    /**
+     * Parámetros de los informes (fechas, bodega, proveedor y agrupación)
+     *
+     * @return array [array $filtros, string $agrupar]
+     */
+    private function parametrosInforme($conexion)
+    {
+        $desde = $_GET['desde'] ?? date('Y-01-01');
+        $hasta = $_GET['hasta'] ?? date('Y-m-d');
+
+        $desde = preg_match('/^\d{4}-\d{2}-\d{2}$/', $desde) ? $desde : date('Y-01-01');
+        $hasta = preg_match('/^\d{4}-\d{2}-\d{2}$/', $hasta) ? $hasta : date('Y-m-d');
+
+        if ($desde > $hasta) {
+            [$desde, $hasta] = [$hasta, $desde];
+        }
+
+        $bodega = trim((string) ($_GET['bodega'] ?? ''));
+
+        $proveedorId = (int) ($_GET['proveedor_id'] ?? 0);
+        $proveedorNombre = '';
+
+        if ($proveedorId > 0) {
+            foreach ($this->model->obtenerProveedores($conexion) as $p) {
+                if ((int) $p['id'] === $proveedorId) {
+                    $proveedorNombre = $p['nombre'];
+                    break;
+                }
+            }
+            if ($proveedorNombre === '') {
+                $proveedorId = 0;
+            }
+        }
+
+        $agrupar = $_GET['agrupar'] ?? 'quimico';
+        if (!in_array($agrupar, ['quimico', 'bodega', 'proveedor', 'mes'], true)) {
+            $agrupar = 'quimico';
+        }
+
+        return [[
+            'desde'            => $desde,
+            'hasta'            => $hasta,
+            'bodega'           => $bodega,
+            'proveedor_id'     => $proveedorId,
+            'proveedor_nombre' => $proveedorNombre,
+        ], $agrupar];
+    }
+
+    /**
+     * Envía un CSV (UTF-8 con BOM, separador ";") al navegador
+     */
+    private function descargarCsv($prefijo, array $encabezados, array $filas)
+    {
+        $nombre = $prefijo . '_' . date('Ymd_His') . '.csv';
+
+        header('Content-Type: text/csv; charset=UTF-8');
+        header('Content-Disposition: attachment; filename="' . $nombre . '"');
+        header('Cache-Control: no-store');
+
+        $salida = fopen('php://output', 'w');
+        fwrite($salida, "\xEF\xBB\xBF"); // BOM para Excel
+        fputcsv($salida, $encabezados, ';');
+
+        foreach ($filas as $fila) {
+            fputcsv($salida, $fila, ';');
+        }
+
+        fclose($salida);
+        exit;
     }
     
     /**
