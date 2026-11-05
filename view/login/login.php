@@ -110,7 +110,7 @@ if (isset($mensaje) && strlen($mensaje) > 200) {
 
     <div class="login-wrapper">
         <div class="login-image">
-            <img src="/calidad/view/assets/images/icons/grc_sf.png" alt="GRC Frutas" title="GRC Frutas - Sistema de Calidad">
+            <img src="/calidad/view/assets/images/icons/grc_sf.png" alt="GRCFRUIT SPA" title="GRCFRUIT SPA - Sistema de Calidad">
         </div>
 
         <div class="login-form">
@@ -175,7 +175,7 @@ if (isset($mensaje) && strlen($mensaje) > 200) {
                 </form>
 
                 <p class="login-footer">
-                    <i class="fas fa-shield-alt me-1"></i> GRC Frutas · Sistema de Gestión de Calidad
+                    <i class="fas fa-shield-alt me-1"></i> GRCFRUIT SPA · Sistema de Gestión de Calidad
                 </p>
             </div>
         </div>

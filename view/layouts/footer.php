@@ -3,7 +3,7 @@
 <!-- Footer simple -->
 <footer class="bg-dark text-white text-center py-3 mt-5">
     <div class="container">
-        <p class="mb-0">&copy; 2024 GRC Frutas - Sistema de Gestión de Calidad</p>
+        <p class="mb-0">&copy; <?php echo date('Y'); ?> GRCFRUIT SPA - Sistema de Gestión de Calidad</p>
         <small class="opacity-75">Desarrollado para control de calidad agrícola</small>
     </div>
 </footer>
