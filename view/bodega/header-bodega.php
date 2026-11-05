@@ -14,6 +14,19 @@ if ($isProduction) {
     header("Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://cdn.plot.ly; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com; img-src 'self' data: https:; font-src 'self' https://cdnjs.cloudflare.com https://fonts.gstatic.com;");
     header('Strict-Transport-Security: max-age=31536000; includeSubDomains; preload');
 }
+
+// Datos para el cambio de cliente (solo si hay sesión y conexión activas)
+$empresasNav = [];
+$temporadasNav = [];
+
+if (isset($_SESSION['username']) && isset($conexion) && $conexion instanceof mysqli) {
+    if (class_exists('ModelEmpresa')) {
+        $empresasNav = (new ModelEmpresa($conexion))->GetEmpresa() ?: [];
+    }
+    if (class_exists('ModelTemporada')) {
+        $temporadasNav = (new ModelTemporada())->GetTemporada($conexion) ?: [];
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -82,10 +95,18 @@ if ($isProduction) {
                     <strong><?php echo $_SESSION['username'] ?? 'Usuario'; ?></strong>
                 </span>
                 
-                <span class="navbar-text me-3 text-nowrap d-lg-none d-xl-inline">
+                <button type="button" class="btn btn-sm btn-cliente d-none d-lg-inline-flex align-items-center text-nowrap me-2"
+                        data-bs-toggle="modal" data-bs-target="#modalCliente" title="Cambiar cliente">
                     <i class="fas fa-building me-1"></i>
-                    <?php echo htmlspecialchars($_SESSION['empresa'] ?? 'Empresa'); ?>
-                </span>                
+                    <span class="text-truncate cliente-nombre"><?php echo htmlspecialchars($_SESSION['empresa'] ?? 'Empresa'); ?></span>
+                    <i class="fas fa-chevron-down ms-1" style="font-size:.65rem"></i>
+                </button>
+
+                <button type="button" class="btn btn-outline-light w-100 d-lg-none mt-2"
+                        data-bs-toggle="modal" data-bs-target="#modalCliente">
+                    <i class="fas fa-building me-2"></i> Cambiar cliente
+                </button>
+
                 <span class="navbar-text text-nowrap d-lg-none d-xl-inline">
                     <i class="fas fa-calendar-alt me-1"></i>
                     <?php echo $_SESSION['temporada'] ?? 'Temporada'; ?>
@@ -97,7 +118,19 @@ if ($isProduction) {
             </div>
         </div>
     </nav>
-    
+
+    <?php if (!empty($_SESSION['flash_contexto'])): ?>
+        <?php $flash = $_SESSION['flash_contexto']; unset($_SESSION['flash_contexto']); ?>
+        <div class="container-fluid pt-3">
+            <div class="alert alert-<?php echo htmlspecialchars($flash['tipo'] ?? 'success'); ?> alert-dismissible fade show mb-0" role="alert">
+                <i class="fas fa-info-circle me-2"></i><?php echo htmlspecialchars($flash['mensaje'] ?? ''); ?>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        </div>
+    <?php endif; ?>
+
+    <?php include __DIR__ . '/../layouts/modal-cliente.php'; ?>
+
     <div id="overlay"></div>
     
     <div class="container-fluid">

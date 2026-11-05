@@ -189,6 +189,14 @@ switch ($request_uri['path']) {
         break;
 
     // =======================
+    // CAMBIO DE CLIENTE (SIN CERRAR SESIÓN)
+    // =======================
+    case '/calidad/cambiar-empresa':
+        $controllerEmpresa = new ControllerEmpresa();
+        $controllerEmpresa->cambiarContexto($conexion);
+        break;
+
+    // =======================
     // CIERRE DE SESIÓN
     // =======================
     case '/calidad/close':
