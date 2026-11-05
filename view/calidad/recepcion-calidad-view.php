@@ -175,7 +175,8 @@ $recepciones = $recepcion->GetRecepcion($conexion, $empresa, $temporada, $_GET['
             </div>
 
             <div class="card-body">
-                <table class="table table-striped table-bordered" id="table-calibre">
+                <div class="table-responsive">
+                <table class="table table-striped table-bordered tabla-datos" id="table-calibre">
                     <thead>
                         <tr>
                             <th scope="col">ID</th>
@@ -214,6 +215,7 @@ $recepciones = $recepcion->GetRecepcion($conexion, $empresa, $temporada, $_GET['
                         </tr>
                     </tfoot>
                 </table>
+                </div>
             </div>
         </div>
     </div>
@@ -273,7 +275,8 @@ $recepciones = $recepcion->GetRecepcion($conexion, $empresa, $temporada, $_GET['
             </div>
 
             <div class="card-body">
-                <table class="table table-striped table-bordered" id="table-calibre">
+                <div class="table-responsive">
+                <table class="table table-striped table-bordered tabla-datos" id="table-calibre">
                     <thead>
                         <tr>
                             <th scope="col">ID</th>
@@ -315,6 +318,7 @@ $recepciones = $recepcion->GetRecepcion($conexion, $empresa, $temporada, $_GET['
                         </tr>
                     </tfoot>
                 </table>
+                </div>
             </div>
         </div>
     </div>
@@ -387,7 +391,8 @@ $recepciones = $recepcion->GetRecepcion($conexion, $empresa, $temporada, $_GET['
             </div>
 
             <div class="card-body">
-                <table class="table table-striped table-bordered" id="table-calibre">
+                <div class="table-responsive">
+                <table class="table table-striped table-bordered tabla-datos" id="table-calibre">
                     <thead>
                         <tr>
                             <th scope="col" hidden>ID</th>
@@ -423,6 +428,7 @@ $recepciones = $recepcion->GetRecepcion($conexion, $empresa, $temporada, $_GET['
                         ?>
                     </tbody>
                 </table>
+                </div>
             </div>
         </div>
     </div>
@@ -467,7 +473,8 @@ $recepciones = $recepcion->GetRecepcion($conexion, $empresa, $temporada, $_GET['
             </div>
 
             <div class="card-body">
-                <table class="table table-striped table-bordered" id="table-calibre">
+                <div class="table-responsive">
+                <table class="table table-striped table-bordered tabla-datos" id="table-calibre">
                     <thead>
                         <tr>
                             <th scope="col">ID</th>
@@ -495,6 +502,7 @@ $recepciones = $recepcion->GetRecepcion($conexion, $empresa, $temporada, $_GET['
                         ?>
                     </tbody>
                 </table>
+                </div>
             </div>
         </div>
     </div>
@@ -546,7 +554,8 @@ $recepciones = $recepcion->GetRecepcion($conexion, $empresa, $temporada, $_GET['
             </div>
 
             <div class="card-body">
-                <table class="table table-striped table-bordered" id="table-calibre">
+                <div class="table-responsive">
+                <table class="table table-striped table-bordered tabla-datos" id="table-calibre">
                     <thead>
                         <tr>
                             <th scope="col">ID</th>
@@ -578,6 +587,7 @@ $recepciones = $recepcion->GetRecepcion($conexion, $empresa, $temporada, $_GET['
                         ?>
                     </tbody>
                 </table>
+                </div>
             </div>
         </div>
     </div>

@@ -47,7 +47,7 @@ $next     = min($paginas, $actual + 1);
         <nav aria-label="Paginación">
             <ul class="pagination pagination-sm mb-0">
 
-                <li class="page-item <?php echo $actual <= 1 ? 'disabled' : ''; ?>">
+                <li class="page-item pag-extremo <?php echo $actual <= 1 ? 'disabled' : ''; ?>">
                     <a class="page-link" href="<?php echo htmlspecialchars(pag_enlace($pagUrl, $pagParams, 1)); ?>" title="Primera">
                         <i class="fas fa-angles-left"></i>
                     </a>
@@ -89,7 +89,7 @@ $next     = min($paginas, $actual + 1);
                     </a>
                 </li>
 
-                <li class="page-item <?php echo $actual >= $paginas ? 'disabled' : ''; ?>">
+                <li class="page-item pag-extremo <?php echo $actual >= $paginas ? 'disabled' : ''; ?>">
                     <a class="page-link" href="<?php echo htmlspecialchars(pag_enlace($pagUrl, $pagParams, $paginas)); ?>" title="Última">
                         <i class="fas fa-angles-right"></i>
                     </a>

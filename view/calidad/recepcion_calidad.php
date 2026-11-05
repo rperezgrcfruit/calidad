@@ -19,8 +19,8 @@
                     <i class="fas fa-sync-alt me-2"></i> Actualizar
                 </button>
 
-                <form method="get" action="/calidad/recepcion-calidad" class="ms-auto d-flex gap-2" role="search">
-                    <input type="search" name="q" class="form-control" style="min-width: 300px"
+                <form method="get" action="/calidad/recepcion-calidad" class="ms-auto d-flex flex-wrap gap-2 filtro-form" role="search">
+                    <input type="search" name="q" class="form-control filtro-busqueda"
                            placeholder="Buscar lote, productor, variedad..."
                            value="<?php echo htmlspecialchars($buscar ?? ''); ?>"
                            maxlength="60" autocomplete="off">
@@ -48,7 +48,7 @@
         <div class="card-body">
             <?php if (isset($result) && count($result) > 0): ?>
                 <div class="table-responsive">
-                    <table class="table table-hover align-middle">
+                    <table class="table table-hover align-middle tabla-datos">
                         <thead>
                             <tr>
                                 <th>#</th>
@@ -71,7 +71,7 @@
                                     <td><?php echo htmlspecialchars($recepcion['variedad']); ?></td>
                                     <td><?php echo htmlspecialchars($recepcion['r_social']); ?></td>
                                     <td><?php echo number_format($recepcion['cantidad_frutos'], 0, ',', '.'); ?></td>
-                                    <td class="text-center">
+                                    <td class="text-center text-nowrap">
                                         <a href="/calidad/recepcion-calidad/ver-recepcion/?lote=<?php echo urlencode($recepcion['lote']); ?>" 
                                            class="btn btn-sm btn-outline-success me-2" 
                                            title="Ver detalle">

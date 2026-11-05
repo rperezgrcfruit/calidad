@@ -75,17 +75,17 @@ if ($isProduction) {
                     <?php endif; ?>
                 </ul>
                 
-                <span class="navbar-text me-3">
+                <span class="navbar-text me-3 text-nowrap">
                     <i class="fas fa-user me-1"></i>
                     <strong><?php echo $_SESSION['username'] ?? 'Usuario'; ?></strong>
                 </span>
                 
-                <span class="navbar-text me-3 text-success">
+                <span class="navbar-text me-3 text-nowrap d-lg-none d-xl-inline">
                     <i class="fas fa-building me-1"></i>
                     <?php echo $_SESSION['empresa'] ?? 'Empresa'; ?>
                 </span>
                 
-                <span class="navbar-text">
+                <span class="navbar-text text-nowrap d-lg-none d-xl-inline">
                     <i class="fas fa-calendar-alt me-1"></i>
                     <?php echo $_SESSION['temporada'] ?? 'Temporada'; ?>
                 </span>

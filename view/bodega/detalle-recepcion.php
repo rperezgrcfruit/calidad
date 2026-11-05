@@ -52,8 +52,8 @@ $fmtUsd = function ($v) {
                         <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars(generateCSRFToken()); ?>">
                         <input type="hidden" name="recepcion" value="<?php echo (int) $recepcion['n_recepcion']; ?>">
                         <label class="form-label" for="guia_archivo">Subir GUIA (PDF, JPG o PNG · máx. 20 MB)</label>
-                        <div class="d-flex gap-2">
-                            <input type="file" class="form-control" name="guia" id="guia_archivo" accept=".pdf,.jpg,.jpeg,.png" required>
+                        <div class="d-flex flex-wrap gap-2">
+                            <input type="file" class="form-control flex-grow-1" style="min-width: 0" name="guia" id="guia_archivo" accept=".pdf,.jpg,.jpeg,.png" required>
                             <button type="submit" class="btn btn-success text-nowrap">
                                 <i class="fas fa-upload me-2"></i> Subir
                             </button>
@@ -151,7 +151,7 @@ $fmtUsd = function ($v) {
         <div class="card-body">
             <?php if ($totalItems > 0): ?>
                 <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
+                    <table class="table table-hover align-middle tabla-datos mb-0">
                         <thead>
                             <tr>
                                 <th>Código</th>

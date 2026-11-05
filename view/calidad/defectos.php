@@ -34,7 +34,7 @@
         <div class="card-body">
             <?php if (isset($Defectos) && count($Defectos) > 0): ?>
                 <div class="table-responsive">
-                    <table class="table table-hover align-middle">
+                    <table class="table table-hover align-middle tabla-datos">
                         <thead>
                             <tr>
                                 <th>#</th>
