@@ -7,7 +7,7 @@
  */
 $empresaActual = $_SESSION['empresa'] ?? '';
 $temporadaActual = $_SESSION['temporada'] ?? '';
-$volverActual = $_SERVER['REQUEST_URI'] ?? '/calidad/seleccion-modulo';
+$volverActual = $_SERVER['REQUEST_URI'] ?? '/calidad/';
 ?>
 
 <div class="modal fade" id="modalCliente" tabindex="-1" aria-labelledby="tituloModalCliente" aria-hidden="true">

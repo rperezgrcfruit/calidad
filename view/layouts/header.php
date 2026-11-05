@@ -81,7 +81,7 @@ if (isset($_SESSION['username']) && isset($conexion) && $conexion instanceof mys
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="/calidad/seleccion-modulo">
+                        <a class="nav-link" href="/calidad/">
                             <i class="fas fa-layer-group me-1"></i> Módulos
                         </a>
                     </li>

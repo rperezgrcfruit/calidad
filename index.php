@@ -19,42 +19,90 @@ require_once 'controller/ControllerDefectos.php';
 require_once 'model/ModeloBodegaQuimicos.php';
 require_once 'controller/ControllerBodegaQuimicos.php';
 
+$login           = new ControllerLogin();
 $recepcionCalidad = new ControllerRecepcionCalidad();
-$defectos = new ControllerDefectos();
-$bodegaQuimicos = new ControllerBodegaQuimicos();
+$defectos        = new ControllerDefectos();
+$bodegaQuimicos  = new ControllerBodegaQuimicos();
 
-// Obtener la URL de la solicitud
-$url = parse_url($_SERVER['REQUEST_URI']);
-$request_uri = $url;
+// URL solicitada
+$request_uri = parse_url($_SERVER['REQUEST_URI']);
 $request_uri = preg_replace('/\/$/', '', $request_uri);
+$path = $request_uri['path'] ?? '';
 
-// Ruta actual del archivo (index.php está en /calidad/)
-$current_path = '/calidad';
+// Estado de sesión
+$logueado = isset($_SESSION['username']);
+$modulo   = $_SESSION['modulo'] ?? '';
 
-// Si la URL es solo '/calidad' o '/', redirigir al login o dashboard según sesión
-if (!isset($_SESSION['username'])) {
-    // Sin sesión - mostrar login
-    $empresa = new ControllerEmpresa();
-    $result = $empresa->GetEmpresa($conexion);
+// ============================================================
+// PANTALLA PÚBLICA: SELECTOR DE MÓDULO
+// ============================================================
+if ($path === '' || $path === '/calidad') {
+    if ($logueado && $modulo === 'calidad') {
+        header('Location: ' . BASE_URL . '/recepcion-calidad');
+        exit;
+    }
+    if ($logueado && $modulo === 'quimicos') {
+        header('Location: ' . BASE_URL . '/bodega-quimicos/recepciones');
+        exit;
+    }
 
-    $temporada = new ControllerTemporada();
-    $resultT = $temporada->GetTemporada($conexion);
-
-    // Incluir vista del login directamente
-    include_once 'view/login/login.php';
+    include_once 'view/seleccion-modulo.php';
     exit;
 }
 
-// Si está loggeado y va a la raíz, ir a la selección de módulo
-if ($request_uri['path'] === '' || $request_uri['path'] === '/calidad') {
-    $request_uri['path'] = '/calidad/seleccion-modulo';
+// ============================================================
+// LOGIN POR MÓDULO
+// ============================================================
+if ($path === '/calidad/login/calidad') {
+    $login->calidad($conexion);
+    exit;
 }
 
-switch ($request_uri['path']) {
-    case '/calidad/seleccion-modulo':
-        include_once 'view/seleccion-modulo.php';
-        break;
-    
+if ($path === '/calidad/login/quimicos') {
+    $login->quimicos($conexion);
+    exit;
+}
+
+// ============================================================
+// GUARDAS POR MÓDULO
+// ============================================================
+$esCalidad = ($path === '/calidad/main')
+    || ($path === '/calidad/cambiar-empresa')
+    || (strpos($path, '/calidad/recepcion-calidad') === 0);
+
+$esQuimicos = (strpos($path, '/calidad/bodega-quimicos') === 0);
+
+if ($esCalidad) {
+    $sesionCalidadOk = $logueado
+        && $modulo === 'calidad'
+        && !empty($_SESSION['empresa'])
+        && !empty($_SESSION['temporada']);
+
+    if (!$sesionCalidadOk) {
+        header('Location: ' . BASE_URL . '/login/calidad');
+        exit;
+    }
+}
+
+if ($esQuimicos) {
+    $sesionQuimicosOk = $logueado && $modulo === 'quimicos';
+
+    if (!$sesionQuimicosOk) {
+        header('Location: ' . BASE_URL . '/login/quimicos');
+        exit;
+    }
+}
+
+// Compatibilidad con el enlace antiguo
+if ($path === '/calidad/seleccion-modulo') {
+    header('Location: ' . BASE_URL . '/');
+    exit;
+}
+
+// ============================================================
+// RUTAS
+// ============================================================
+switch ($path) {
     case '/calidad/main':
         include_once 'view/main/main.php';
         break;
@@ -63,7 +111,7 @@ switch ($request_uri['path']) {
     // RECEPCIÓN CALIDAD
     // =======================
     case '/calidad/recepcion-calidad':
-        $index = $recepcionCalidad->index($conexion);
+        $recepcionCalidad->index($conexion);
         break;
 
     case '/calidad/recepcion-calidad/nueva-recepcion':
@@ -89,10 +137,8 @@ switch ($request_uri['path']) {
         break;
 
     case '/calidad/recepcion-calidad/ver-recepcion':
-        $url = $_SERVER['QUERY_STRING'];
-
-        parse_str($url, $output);
-        $lote = $output['lote'];
+        parse_str($_SERVER['QUERY_STRING'] ?? '', $output);
+        $lote = $output['lote'] ?? '';
 
         $validarLote = $recepcionCalidad->ValidarLoteRecepcion($conexion, $lote);
 
@@ -101,22 +147,21 @@ switch ($request_uri['path']) {
         } else {
             header('Location: ' . BASE_URL . '/recepcion-calidad');
         }
-
         break;
 
     case '/calidad/recepcion-calidad/ingreso':
-        if (isset($_POST) && !empty($_POST) && $_POST != null) {
-            $recepcion = new ControllerRecepcionCalidad();
-            $ingreso = $recepcion->InsertRecepcion($conexion, $_POST);
+        if (!empty($_POST)) {
+            $ingreso = $recepcionCalidad->InsertRecepcion($conexion, $_POST);
 
             if ($ingreso) {
-                header('location:/calidad/recepcion-calidad');
-            } else {
-                echo json_encode([
-                    'respuesta' => '0',
-                    'mensaje' => 'Lote no existe o ya se encuentra en otra recepcion de calidad'
-                ]);
+                header('Location: ' . BASE_URL . '/recepcion-calidad');
+                exit;
             }
+
+            echo json_encode([
+                'respuesta' => '0',
+                'mensaje' => 'Lote no existe o ya se encuentra en otra recepcion de calidad'
+            ]);
         } else {
             header('Location: ' . BASE_URL . '/recepcion-calidad');
         }
@@ -128,21 +173,21 @@ switch ($request_uri['path']) {
     case '/calidad/bodega-quimicos':
         $bodegaQuimicos->dashboard($conexion);
         break;
-    
+
     case '/calidad/bodega-quimicos/recepciones':
         $bodegaQuimicos->listaRecepciones($conexion);
         break;
-    
+
     case '/calidad/bodega-quimicos/recepciones/nuevo':
         $bodegaQuimicos->nuevoRegistro($conexion);
         break;
-    
+
     case '/calidad/bodega-quimicos/recepciones/guardar':
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $bodegaQuimicos->guardarRecepcion($conexion);
         }
         break;
-    
+
     case '/calidad/bodega-quimicos/recepciones/detalle':
         $bodegaQuimicos->verDetalle($conexion);
         break;
@@ -171,7 +216,7 @@ switch ($request_uri['path']) {
             echo json_encode($quimico ?: ['error' => 'No encontrado']);
         }
         break;
-    
+
     case '/calidad/bodega-quimicos/bodegas':
         $bodegaQuimicos->listaBodegas($conexion);
         break;
@@ -179,7 +224,7 @@ switch ($request_uri['path']) {
     case '/calidad/bodega-quimicos/bodegas/guardar':
         $bodegaQuimicos->guardarBodega($conexion);
         break;
-    
+
     case '/calidad/bodega-quimicos/proveedores':
         $bodegaQuimicos->listaProveedores($conexion);
         break;
@@ -189,7 +234,7 @@ switch ($request_uri['path']) {
         break;
 
     // =======================
-    // CAMBIO DE CLIENTE (SIN CERRAR SESIÓN)
+    // CAMBIO DE CLIENTE (módulo Calidad)
     // =======================
     case '/calidad/cambiar-empresa':
         $controllerEmpresa = new ControllerEmpresa();
@@ -205,6 +250,6 @@ switch ($request_uri['path']) {
         break;
 
     default:
-        header('Location: ' . BASE_URL . '/recepcion-calidad');
+        header('Location: ' . BASE_URL . '/');
         break;
 }

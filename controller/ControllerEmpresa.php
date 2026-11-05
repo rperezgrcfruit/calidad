@@ -28,14 +28,14 @@ class ControllerEmpresa{
         }
 
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            header('Location: ' . BASE_URL . '/seleccion-modulo');
+            header('Location: ' . BASE_URL . '/');
             exit;
         }
 
         // URL de retorno segura (solo rutas internas de la aplicación)
-        $volver = (string) ($_POST['volver'] ?? '/calidad/seleccion-modulo');
+        $volver = (string) ($_POST['volver'] ?? '/calidad/');
         if (!preg_match('#^/calidad/[A-Za-z0-9\-_/?=&%\.]*$#', $volver) || strpos($volver, '//') !== false) {
-            $volver = '/calidad/seleccion-modulo';
+            $volver = '/calidad/';
         }
 
         $mensaje = '';

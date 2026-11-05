@@ -1,70 +1,55 @@
-<?php 
-// La sesión ya está iniciada por index.php
-// Si no hay usuario autenticado, redirigir al login
-if (!isset($_SESSION['username'])) {
-    header('Location: ' . BASE_URL . '/');
-    exit;
-}
-
-// Header simplificado: sin menús de módulos en la pantalla principal
-define('SIMPLE_HEADER', true);
-
-include RUTA . '/calidad/view/layouts/header.php'; 
+<?php
+/**
+ * Pantalla pública de selección de módulo.
+ * No requiere sesión: cada módulo pide su propio login.
+ */
 ?>
-
-<div class="container-fluid py-4">
-    <div class="row justify-content-center">
-        <div class="col-12 col-md-8 col-lg-6">
-            <div class="card shadow-sm">
-                <div class="card-header bg-primary text-white text-center">
-                    <h4 class="mb-0"><i class="fas fa-sign-in-alt me-2"></i> Seleccione su Módulo</h4>
-                </div>
-                <div class="card-body">
-                    <div class="text-center mb-4">
-                        <h5 class="mb-2">Bienvenido, <?php echo htmlspecialchars($_SESSION['username'] ?? 'Usuario'); ?></h5>
-                        <p class="text-muted mb-0">Empresa: <?php echo htmlspecialchars($_SESSION['empresa'] ?? 'Empresa'); ?></p>
-                        <p class="text-muted mb-0">Temporada: <?php echo htmlspecialchars($_SESSION['temporada'] ?? 'Temporada'); ?></p>
-                    </div>
-                    
-                    <div class="row g-3">
-                        <div class="col-12">
-                            <a href="/calidad/recepcion-calidad" class="card card-link d-flex flex-column align-items-center p-4 m-2">
-                                <i class="fas fa-clipboard-list fa-3x text-success mb-3"></i>
-                                <h5 class="mb-2">Recepción Calidad</h5>
-                                <p class="text-muted text-center mb-0">Gestión de calidad, defectos y no conformidades</p>
-                            </a>
-                        </div>
-                        
-                        <div class="col-12">
-                            <a href="/calidad/bodega-quimicos/recepciones" class="card card-link d-flex flex-column align-items-center p-4 m-2">
-                                <i class="fas fa-flask fa-3x text-info mb-3"></i>
-                                <h5 class="mb-2">Gestión Químicos</h5>
-                                <p class="text-muted text-center mb-0">Recepciones y análisis químicos</p>
-                            </a>
-                        </div>
-                    </div>
-                    
-                    <div class="text-center mt-4">
-                        <a href="/calidad/close" class="btn btn-outline-secondary">
-                            <i class="fas fa-sign-out-alt me-2"></i> Cerrar Sesión
-                        </a>
-                    </div>
-                </div>
-            </div>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seleccione módulo - GRCFRUIT SPA</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer">
+    <link rel="stylesheet" href="/calidad/view/assets/css/styles.css?v=<?php echo @filemtime(RUTA . '/calidad/view/assets/css/styles.css') ?: '1'; ?>">
+    <link rel="icon" href="/calidad/favicon.ico" type="image/x-icon">
+</head>
+<body class="login-page">
+    <div class="selector-panel">
+        <div class="selector-marca">
+            <img src="/calidad/view/assets/images/icons/grc_sf.png" alt="GRCFRUIT SPA" title="GRCFRUIT SPA">
+            <h1>Sistema de Gestión de Calidad</h1>
+            <p>Seleccione el módulo con el que desea trabajar</p>
         </div>
+
+        <div class="selector-opciones">
+            <a href="/calidad/recepcion-calidad" class="selector-card">
+                <span class="selector-icono">
+                    <i class="fas fa-clipboard-list"></i>
+                </span>
+                <span class="selector-texto">
+                    <strong>Recepción Calidad</strong>
+                    <small>Lotes, productores, defectos y calibres</small>
+                </span>
+                <i class="fas fa-chevron-right selector-flecha"></i>
+            </a>
+
+            <a href="/calidad/bodega-quimicos/recepciones" class="selector-card">
+                <span class="selector-icono">
+                    <i class="fas fa-flask"></i>
+                </span>
+                <span class="selector-texto">
+                    <strong>Bodega Químicos</strong>
+                    <small>Recepciones, existencias y proveedores</small>
+                </span>
+                <i class="fas fa-chevron-right selector-flecha"></i>
+            </a>
+        </div>
+
+        <p class="selector-pie">
+            <i class="fas fa-shield-alt me-1"></i> GRCFRUIT SPA · Sistema de Gestión de Calidad
+        </p>
     </div>
-</div>
-
-<style>
-.card.card-link {
-    text-decoration: none;
-    color: inherit;
-    transition: transform 0.2s, box-shadow 0.2s;
-}
-.card.card-link:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
-}
-</style>
-
-<?php include RUTA . '/calidad/view/layouts/footer.php'; ?>
+</body>
+</html>

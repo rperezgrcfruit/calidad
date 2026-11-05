@@ -351,6 +351,148 @@ body.login-page {
     max-width: 170px;
 }
 
+/* ===============================
+   SELECTOR DE MÓDULO (pantalla pública)
+   =============================== */
+.selector-panel {
+    width: 100%;
+    max-width: 560px;
+    background: var(--white);
+    border-radius: 18px;
+    box-shadow: 0 24px 70px rgba(0, 0, 0, .35);
+    padding: 36px 34px;
+}
+
+.selector-marca {
+    text-align: center;
+    margin-bottom: 26px;
+}
+
+.selector-marca img {
+    width: 92px;
+    height: 92px;
+    object-fit: contain;
+    margin-bottom: 10px;
+}
+
+.selector-marca h1 {
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: var(--primary);
+    margin-bottom: 4px;
+}
+
+.selector-marca p {
+    color: var(--secondary);
+    font-size: .9rem;
+    margin: 0;
+}
+
+.selector-opciones {
+    display: grid;
+    gap: 14px;
+}
+
+.selector-card {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 18px;
+    border: 1px solid var(--gray-300);
+    border-radius: 14px;
+    text-decoration: none;
+    color: var(--dark);
+    transition: border-color .2s, background-color .2s, transform .2s, box-shadow .2s;
+}
+
+.selector-card:hover {
+    border-color: var(--accent);
+    background-color: var(--accent-soft);
+    transform: translateY(-2px);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, .08);
+    color: var(--dark);
+}
+
+.selector-icono {
+    width: 48px;
+    height: 48px;
+    flex: 0 0 48px;
+    border-radius: 12px;
+    background-color: var(--primary);
+    color: var(--white);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+}
+
+.selector-card:nth-child(2) .selector-icono {
+    background-color: var(--accent);
+}
+
+.selector-texto {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.selector-texto strong {
+    font-size: 1rem;
+}
+
+.selector-texto small {
+    color: var(--secondary);
+}
+
+.selector-flecha {
+    color: var(--secondary);
+}
+
+.selector-pie {
+    text-align: center;
+    color: var(--secondary);
+    font-size: .8rem;
+    margin: 24px 0 0;
+}
+
+/* Enlaces auxiliares del login */
+.login-volver {
+    display: inline-block;
+    font-size: .82rem;
+    color: var(--secondary);
+    text-decoration: none;
+    margin-bottom: 14px;
+}
+
+.login-volver:hover {
+    color: var(--primary);
+}
+
+.login-nota {
+    margin-top: 14px;
+    font-size: .8rem;
+    color: var(--secondary);
+    text-align: center;
+}
+
+@media (max-width: 575.98px) {
+    .selector-panel {
+        padding: 26px 20px;
+        border-radius: 14px;
+    }
+
+    .selector-marca img {
+        width: 72px;
+        height: 72px;
+    }
+
+    .selector-card {
+        padding: 14px;
+        gap: 12px;
+    }
+}
+
 .nav-link {
     color: var(--white) !important;
     font-weight: 500;

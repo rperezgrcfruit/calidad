@@ -14,19 +14,6 @@ if ($isProduction) {
     header("Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://cdn.plot.ly; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com; img-src 'self' data: https:; font-src 'self' https://cdnjs.cloudflare.com https://fonts.gstatic.com;");
     header('Strict-Transport-Security: max-age=31536000; includeSubDomains; preload');
 }
-
-// Datos para el cambio de cliente (solo si hay sesión y conexión activas)
-$empresasNav = [];
-$temporadasNav = [];
-
-if (isset($_SESSION['username']) && isset($conexion) && $conexion instanceof mysqli) {
-    if (class_exists('ModelEmpresa')) {
-        $empresasNav = (new ModelEmpresa($conexion))->GetEmpresa() ?: [];
-    }
-    if (class_exists('ModelTemporada')) {
-        $temporadasNav = (new ModelTemporada())->GetTemporada($conexion) ?: [];
-    }
-}
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -84,7 +71,7 @@ if (isset($_SESSION['username']) && isset($conexion) && $conexion instanceof mys
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="/calidad/seleccion-modulo">
+                        <a class="nav-link" href="/calidad/">
                             <i class="fas fa-layer-group me-1"></i> Módulos
                         </a>
                     </li>
@@ -95,24 +82,7 @@ if (isset($_SESSION['username']) && isset($conexion) && $conexion instanceof mys
                     <strong><?php echo $_SESSION['username'] ?? 'Usuario'; ?></strong>
                 </span>
                 
-                <button type="button" class="btn btn-sm btn-cliente d-none d-lg-inline-flex align-items-center text-nowrap me-2"
-                        data-bs-toggle="modal" data-bs-target="#modalCliente" title="Cambiar cliente">
-                    <i class="fas fa-building me-1"></i>
-                    <span class="text-truncate cliente-nombre"><?php echo htmlspecialchars($_SESSION['empresa'] ?? 'Empresa'); ?></span>
-                    <i class="fas fa-chevron-down ms-1" style="font-size:.65rem"></i>
-                </button>
-
-                <button type="button" class="btn btn-outline-light w-100 d-lg-none mt-2"
-                        data-bs-toggle="modal" data-bs-target="#modalCliente">
-                    <i class="fas fa-building me-2"></i> Cambiar cliente
-                </button>
-
-                <span class="navbar-text text-nowrap d-lg-none d-xl-inline">
-                    <i class="fas fa-calendar-alt me-1"></i>
-                    <?php echo $_SESSION['temporada'] ?? 'Temporada'; ?>
-                </span>
-                
-                <a href="/calidad/close" class="btn btn-outline-light ms-3">
+                <a href="/calidad/close" class="btn btn-outline-light ms-lg-3">
                     <i class="fas fa-sign-out-alt"></i> Cerrar
                 </a>
             </div>
@@ -128,8 +98,6 @@ if (isset($_SESSION['username']) && isset($conexion) && $conexion instanceof mys
             </div>
         </div>
     <?php endif; ?>
-
-    <?php include __DIR__ . '/../layouts/modal-cliente.php'; ?>
 
     <div id="overlay"></div>
     
